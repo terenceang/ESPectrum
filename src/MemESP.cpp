@@ -38,6 +38,7 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include "Z80_JLS/z80.h"
 #include <stddef.h>
 #include "esp_heap_caps.h"
+#include "esp_err.h"
 
 #include <cstring>
 
@@ -73,8 +74,6 @@ uint8_t MemESP::lastContendedMemReadWrite = 0xff;
 bool MemESP::SPRom = false;
 
 bool MemESP::Init() {
-
-    printf("PSRAM size: %d\n", Config::psram_size);
 
     if (Config::psram_size) {
 

@@ -144,16 +144,23 @@ void CaptureToBmp() {
 
     // process every scanline in reverse order (BMP is topdown)
     for (int y = h - 1; y >= 0; y--) {
-        uint32_t* src = (uint32_t*)VIDEO::vga.frameBuffer[y];
         uint32_t* dst = linebuf;
-        // process every uint32 in scanline
-        for (int i = 0; i < count; i++) {
-            uint32_t srcval = *src++;
-            uint32_t dstval = 0;
-            // swap every uint32
-            dstval |= ((srcval & 0xFFFF0000) >> 16);
-            dstval |= ((srcval & 0x0000FFFF) << 16);
-            *dst++ = dstval;
+        uint32_t* src = (VIDEO::vga.frameBuffer[y]) ? (uint32_t*)VIDEO::vga.frameBuffer[y] : nullptr;
+        if (src) {
+            // process every uint32 in scanline
+            for (int i = 0; i < count; i++) {
+                uint32_t srcval = *src++;
+                uint32_t dstval = 0;
+                // swap every uint32
+                dstval |= ((srcval & 0xFFFF0000) >> 16);
+                dstval |= ((srcval & 0x0000FFFF) << 16);
+                *dst++ = dstval;
+            }
+        } else {
+            // no framebuffer line available (e.g. no PSRAM) - write zeros
+            for (int i = 0; i < count; i++) {
+                *dst++ = 0;
+            }
         }
         // write line to file
         fwrite(linebuf, sizeof(uint32_t), count, pf);

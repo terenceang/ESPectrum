@@ -50,8 +50,8 @@ void esp_chip_info(esp_chip_info_t* info);
 extern "C" int64_t esp_timer_get_time(void);
 #endif
 
-#if defined(__has_include) && __has_include(<esp_spi_flash.h>)
-# include <esp_spi_flash.h>
+#if defined(__has_include) && __has_include(<spi_flash_mmap.h>)
+# include <spi_flash_mmap.h>
 #else
 // Fallback prototypes
 uint32_t spi_flash_get_chip_size(void);

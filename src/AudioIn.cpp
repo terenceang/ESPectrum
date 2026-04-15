@@ -47,13 +47,14 @@ double AudioIn::Factor = 0;
 uint64_t AudioIn::Basepos = 0;
 static gpio_num_t gpio_pin = GPIO_NUM_NC;
 
-extern "C" void IRAM_ATTR AudioInGetAudio();
+extern "C" void AudioInGetAudio();
 
 void IRAM_ATTR AudioInGetAudio() {
     if (AudioIn::Status == AUDIOIN_PLAY) {
-        AudioIn::Buffer[AudioIn::sample_index++] = gpio_get_level(gpio_pin) != 0;
-        // AudioIn::Buffer[AudioIn::sample_index++] = gpio_get_level(gpio_pin) == 0; // Inverted polarity
-        if (AudioIn::sample_index >= AudioIn::Bufsize) AudioIn::sample_index = 0;
+        uint32_t idx = AudioIn::sample_index;
+        AudioIn::Buffer[idx] = gpio_get_level(gpio_pin) != 0;
+        if (++idx >= (uint32_t)AudioIn::Bufsize) idx = 0;
+        AudioIn::sample_index = idx;
     }
 }
 

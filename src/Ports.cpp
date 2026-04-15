@@ -265,8 +265,6 @@ IRAM_ATTR uint8_t Ports::input(uint16_t address) {
         // Check if TRDOS Rom is mapped.
         if (ESPectrum::trdos) {
 
-            uint8_t dat;
-
             switch( address & 0xe3) {
                 case 0x03:
                 case 0x23:

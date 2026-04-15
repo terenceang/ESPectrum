@@ -87,18 +87,21 @@ void OSD::restoreBackbufferData(bool force) {
 
         uint32_t *backbuffer32 = nullptr;
         for (uint32_t m = y; m < y + h; m++) {
-            backbuffer32 = (uint32_t *)(VIDEO::vga.frameBuffer[m]);
+            backbuffer32 = (VIDEO::vga.frameBuffer[m]) ? (uint32_t *)VIDEO::vga.frameBuffer[m] : nullptr;
             for (uint32_t x_off = x >> 2; x_off < ((x + w) >> 2) + 1;) {
                 uint32_t run_length = VIDEO::SaveRect[j++];
                 if (run_length & 0x80000000) {  // Bloque comprimido
                     run_length &= 0x7FFFFFFF;  // Limpiar el bit más alto
                     uint32_t value = VIDEO::SaveRect[j++];
                     for (int k = 0; k < run_length; k++) {
-                        backbuffer32[x_off++] = value;
+                        if (backbuffer32) backbuffer32[x_off] = value;
+                        x_off++;
                     }
                 } else {  // Bloque sin comprimir
                     for (int k = 0; k < run_length; k++) {
-                        backbuffer32[x_off++] = VIDEO::SaveRect[j++];
+                        uint32_t val = VIDEO::SaveRect[j++];
+                        if (backbuffer32) backbuffer32[x_off] = val;
+                        x_off++;
                     }
                 }
             }
@@ -120,9 +123,9 @@ void OSD::saveBackbufferData(uint16_t x, uint16_t y, uint16_t w, uint16_t h, boo
         VIDEO::SaveRect[SaveRectpos++] = ( w << 16 ) | h;
 
         for (uint32_t m = y; m < y + h; m++) {
-            uint32_t *backbuffer32 = (uint32_t *)(VIDEO::vga.frameBuffer[m]);
+            uint32_t *backbuffer32 = (VIDEO::vga.frameBuffer[m]) ? (uint32_t *)VIDEO::vga.frameBuffer[m] : nullptr;
             uint32_t n_start = x >> 2;
-            uint32_t current_value = backbuffer32[n_start];
+            uint32_t current_value = backbuffer32 ? backbuffer32[n_start] : 0;
             bool raw_mode = true;
             uint32_t count_pos = SaveRectpos;
 
@@ -130,7 +133,8 @@ void OSD::saveBackbufferData(uint16_t x, uint16_t y, uint16_t w, uint16_t h, boo
             VIDEO::SaveRect[SaveRectpos++] = current_value;
 
             for (uint32_t n = n_start + 1; n < ((x + w) >> 2) + 1; n++) {
-                if (backbuffer32[n] == current_value) {
+                uint32_t val = backbuffer32 ? backbuffer32[n] : 0;
+                if (val == current_value) {
                     if ( raw_mode ) {
                         if ( VIDEO::SaveRect[count_pos] != 1 ) {
                             // descarto el ultimo
@@ -146,7 +150,7 @@ void OSD::saveBackbufferData(uint16_t x, uint16_t y, uint16_t w, uint16_t h, boo
                     }
                     VIDEO::SaveRect[count_pos]++;
                 } else {
-                    current_value = backbuffer32[n];
+                    current_value = val;
                     if ( !raw_mode ) {
                         count_pos = SaveRectpos++;
                         VIDEO::SaveRect[count_pos] = 0; // count a 0

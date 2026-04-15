@@ -33,7 +33,6 @@ I2S::I2S(const int i2sIndex)
 
 IRAM_ATTR void I2S::interruptStatic(void *arg)
 {
-	volatile i2s_dev_t &i2s = *i2sDevices[((I2S *)arg)->i2sIndex];
 	//i2s object not safely accesed in DRAM or IRAM
 	//i2s.int_clr.val = i2s.int_raw.val;
 	//using REG_WRITE to clear the interrupt instead
@@ -54,27 +53,23 @@ IRAM_ATTR void I2S::interruptStatic(void *arg)
 void I2S::reset()
 {
 	volatile i2s_dev_t &i2s = *i2sDevices[i2sIndex];
-	const uint32_t conf_reset_flags = I2S_RX_RESET_M | I2S_RX_FIFO_RESET_M | I2S_TX_RESET_M | I2S_TX_FIFO_RESET_M;
 
 #if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
+	const uint32_t conf_reset_flags = I2S_RX_RESET_M | I2S_RX_FIFO_RESET_M | I2S_TX_RESET_M | I2S_TX_FIFO_RESET_M;
 	const unsigned long lc_conf_reset_flags = I2S_IN_RST_M | I2S_OUT_RST_M | I2S_AHBM_RST_M | I2S_AHBM_FIFO_RST_M;
 	i2s.lc_conf.val |= lc_conf_reset_flags;
 	i2s.lc_conf.val &= ~lc_conf_reset_flags;
-#endif
-
-	#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
-		i2s.conf.val |= conf_reset_flags;
-		i2s.conf.val &= ~conf_reset_flags;
-
-		while (i2s.state.rx_fifo_reset_back)
-			;
+	i2s.conf.val |= conf_reset_flags;
+	i2s.conf.val &= ~conf_reset_flags;
+	while (i2s.state.rx_fifo_reset_back)
+		;
 #else
-		const uint32_t rx_conf_reset_flags = I2S_RX_RESET_M | I2S_RX_FIFO_RESET_M;
-		const uint32_t tx_conf_reset_flags = I2S_TX_RESET_M | I2S_TX_FIFO_RESET_M;
-		i2s.rx_conf.val |= rx_conf_reset_flags;
-		i2s.rx_conf.val &= ~rx_conf_reset_flags;
-		i2s.tx_conf.val |= tx_conf_reset_flags;
-		i2s.tx_conf.val &= ~tx_conf_reset_flags;
+	const uint32_t rx_conf_reset_flags = I2S_RX_RESET_M | I2S_RX_FIFO_RESET_M;
+	const uint32_t tx_conf_reset_flags = I2S_TX_RESET_M | I2S_TX_FIFO_RESET_M;
+	i2s.rx_conf.val |= rx_conf_reset_flags;
+	i2s.rx_conf.val &= ~rx_conf_reset_flags;
+	i2s.tx_conf.val |= tx_conf_reset_flags;
+	i2s.tx_conf.val &= ~tx_conf_reset_flags;
 #endif
 }
 

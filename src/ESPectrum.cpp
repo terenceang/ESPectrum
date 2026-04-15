@@ -56,12 +56,10 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include "ZXKeyb.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/timer.h"
-#include "soc/timer_group_struct.h"
 #include "esp_timer.h"
 #include "esp_system.h"
 #include "esp_chip_info.h"
-#include "esp_spi_flash.h"
+#include "spi_flash_mmap.h"
 #include "esp_flash.h"
 #include "esp_efuse.h"
 #include "soc/efuse_reg.h"
@@ -523,11 +521,13 @@ void ESPectrum::setup() {
 
     Config::load();
 
-    if (Config::StartMsg) {
-        // Get PSRAM size and set it in Config
+    // Always detect PSRAM at runtime (overrides stale saved value)
+    {
         multi_heap_info_t info; heap_caps_get_info(&info, MALLOC_CAP_SPIRAM);
         Config::psram_size = (info.total_free_bytes + info.total_allocated_bytes) >> 10;
-        // printf("PSRAM size: %d\n", Config::psram_size);
+    }
+
+    if (Config::StartMsg) {
         ZXKeyb::check(); // Check if ZX Keyboard is connected
         if (ZXKeyb::Exists) {
             Config::Board = Config::psram_size ? BOARD_ESPECTRUM_PSRAM : BOARD_ESPECTRUM_NOPSRAM;
@@ -2164,12 +2164,14 @@ for(;;) {
         //         sync_cnt = 0;
         //     }
 
-            // Wait for vertical sync
-            for (;;)
+            // Wait for vertical sync (yield so watchdog/idle can run)
+            for (;;) {
                 if (vsync) {
                     vsync = false;
                     break;
                 }
+                taskYIELD();
+            }
 
             // printf("Vsync!\n");
 
@@ -2177,8 +2179,16 @@ for(;;) {
 
     } else {
 
-        if (idle > 0)
-            delayMicroseconds(idle);
+        if (idle > 0) {
+            // For long waits, allow the RTOS to schedule other tasks first.
+            if (idle > 2000) {
+                vTaskDelay(idle / 1000);
+                int64_t rem = idle % 1000;
+                if (rem > 0) delayMicroseconds(rem);
+            } else {
+                delayMicroseconds(idle);
+            }
+        }
         // else
         //     printf("Elapsed: %d\n",(int)elapsed);
 
