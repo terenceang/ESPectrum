@@ -439,6 +439,8 @@ void ESPectrum::bootKeyboard(int timeout) {
                         case fabgl::VK_z:
                             s[1] = 'Z';
                             break;
+                        default:
+                            break;
                     }
 
                 }
@@ -699,7 +701,7 @@ void ESPectrum::setup() {
                 (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
                 (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
         printf("silicon revision %d, ", chip_info.revision);
-        size_t flash_size = 0;
+        uint32_t flash_size = 0;
         esp_flash_get_size(NULL, &flash_size);
         printf("%dMB %s flash\n", int(flash_size / (1024 * 1024)),
                 (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
@@ -1885,8 +1887,7 @@ IRAM_ATTR void ESPectrum::audioTask(void *unused) {
     pac.gpio_num_right     = -1;
     pac.ledc_channel_right = LEDC_CHANNEL_1;
     pac.ledc_timer_sel     = LEDC_TIMER_0;
-    pac.tg_num             = TIMER_GROUP_0;
-    pac.timer_num          = TIMER_0;
+    (void)0; // timer group/timer selection not required on this platform
     pac.ringbuf_len        = 3072; /* 4096; */
 
     pwm_audio_init(&pac);
@@ -2093,7 +2094,7 @@ for(;;) {
                 snprintf(OSD::stats_lin1, sizeof(OSD::stats_lin1), " %-12s %04d/%04d ", Tape::tapeFileName.substr(0 + ESPectrum::TapeNameScroller, 12).c_str(), Tape::tapeCurBlock + 1, Tape::tapeNumBlocks);
 
                 float percent = (float)((Tape::tapebufByteCount + Tape::tapePlayOffset) * 100) / (float)Tape::tapeFileSize;
-                snprintf(OSD::stats_lin2, sizeof(OSD::stats_lin2), " %05.2f%% %07u/%07u ", percent, Tape::tapebufByteCount + Tape::tapePlayOffset, Tape::tapeFileSize);
+                snprintf(OSD::stats_lin2, sizeof(OSD::stats_lin2), " %05.2f%% %07lu/%07lu ", percent, (unsigned long)(Tape::tapebufByteCount + Tape::tapePlayOffset), (unsigned long)Tape::tapeFileSize);
 
                 if ((++ESPectrum::TapeNameScroller + 12) > Tape::tapeFileName.length()) ESPectrum::TapeNameScroller = 0;
 

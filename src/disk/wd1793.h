@@ -161,7 +161,7 @@ typedef struct {
 #define kRVMWD177XDDEN    0x2 // 0- FM, 1- MFM
 #define kRVMWD177XTest    0x4
 
-#define kRVMWD177XRateSelect kRVMWD177XCLK|kRVMWD177XDDEN|kRVMWD177XTest
+#define kRVMWD177XRateSelect (kRVMWD177XCLK|kRVMWD177XDDEN|kRVMWD177XTest)
 
 #define kRVMWD177XHLD     0x8  // HEAD LOAD -> Signal HLD commands the drive to load the read/write heads
 #define kRVMWD177XHLT     0x10 // HEAD LOAD TIMING -> Signal HLT informs the controller chip that the head has been properly loaded and to commence read or write operations.

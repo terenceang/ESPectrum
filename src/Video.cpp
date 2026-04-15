@@ -623,7 +623,7 @@ IRAM_ATTR void VIDEO::MainScreen_Blank_Snow_Opcode(bool contended) {
 
 IRAM_ATTR void VIDEO::MainScreen_2A3(unsigned int statestoadd, bool contended) {
 
-    uint8_t att;
+    uint8_t att = 0;
 
     if (contended) statestoadd += wait_st[CPU::tstates - (tstateDraw - 3)];
 
@@ -660,7 +660,7 @@ IRAM_ATTR void VIDEO::MainScreen_2A3(unsigned int statestoadd, bool contended) {
 
 IRAM_ATTR void VIDEO::MainScreen_OSD_2A3(unsigned int statestoadd, bool contended) {
 
-    uint8_t att;
+    uint8_t att = 0;
 
     if (contended) statestoadd += wait_st[CPU::tstates - (tstateDraw - 3)];
 

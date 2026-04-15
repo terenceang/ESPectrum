@@ -48,7 +48,7 @@ void CaptureToBmp() {
 
     if (!FileUtils::isSDReady()) return;
 
-    char filename[] = "ESP00000.bmp";
+    char filename[32] = {0};
 
     unsigned char bmp_header2[BMP_HEADER2_SIZE] = {
         0xaa,0xaa,0xaa,0xaa,0xbb,

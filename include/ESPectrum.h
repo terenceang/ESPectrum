@@ -38,6 +38,9 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include "hardpins.h"
 #include "CaptureBMP.h"
 #include "fabgl.h"
+#include "esp_compat.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include "disk/wd1793.h"
 

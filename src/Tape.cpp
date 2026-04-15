@@ -40,6 +40,8 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include <inttypes.h>
 #include "miniz/miniz.h"
 
+#include <unistd.h>
+
 using namespace std;
 
 #include "Tape.h"
@@ -129,7 +131,7 @@ Symdef* Tape::SymDefTable;
 
 int Tape::inflateCSW(int blocknumber, long startPos, long data_length) {
 
-    char destFileName[16]; // Nombre del archivo descomprimido
+    char destFileName[64]; // Nombre del archivo descomprimido (allow path and suffix)
     uint8_t s_inbuf[BUF_SIZE];
     uint8_t s_outbuf[BUF_SIZE];
     FILE *pOutfile;
@@ -1680,5 +1682,10 @@ void Tape::renameBlock(int block, string new_name) {
             fwrite(header, 1, sizeof(header), tape);
             break;
         }
+        case TapeBlock::Data_block:
+        case TapeBlock::Info:
+        case TapeBlock::Unassigned:
+            // Not a header-containing block — nothing to rename
+            break;
     }
 }

@@ -36,6 +36,7 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #define ESPECTRUM_OSD_H
 
 #include "fabgl.h"
+#include "esp_compat.h"
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -163,8 +164,8 @@ public:
     static esp_err_t updateFirmware(FILE *firmware);
     static esp_err_t updateROM(FILE *rombinary, uint8_t arch);
 
-    static char stats_lin1[25]; // "CPU: 00000 / IDL: 00000 ";
-    static char stats_lin2[25]; // "FPS:000.00 / FND:000.00 ";
+    static char stats_lin1[64]; // "CPU: 00000 / IDL: 00000 ";
+    static char stats_lin2[64]; // "FPS:000.00 / FND:000.00 ";
 
     static uint8_t cols;                     // Maximum columns
     static uint8_t mf_rows;                  // File menu maximum rows

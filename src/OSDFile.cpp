@@ -561,7 +561,7 @@ reset:
                 if (elem) {
                     // menuAt(mf_rows, cols - (real_rows > virtual_rows ? 13 : 12));
                     menuAt(mf_rows, cols - 12);
-                    char elements_txt[13];
+                    char elements_txt[32];
                     int nitem = (FileUtils::fileTypes[ftype].begin_row[curDirLevel] + FileUtils::fileTypes[ftype].focus[curDirLevel] ) - (4 + ndirs) + (fdir.length() == 1);
                     snprintf(elements_txt, sizeof(elements_txt), "%d/%d ", nitem > 0 ? nitem : 0 , elem);
                     VIDEO::vga.print(std::string(12 - strlen(elements_txt), ' ').c_str());
@@ -578,7 +578,7 @@ reset:
                     // Search first ocurrence of letter if we're not on that letter yet
                     if ((!Menukey.SHIFT) && (((Menukey.vk >= fabgl::VK_a) && (Menukey.vk <= fabgl::VK_Z)) || Menukey.vk == fabgl::VK_SPACE || ((Menukey.vk >= fabgl::VK_0) && (Menukey.vk <= fabgl::VK_9)))) {
 
-                        int fsearch;
+                        int fsearch = -1;
                         if (Menukey.vk==fabgl::VK_SPACE && FileUtils::fileTypes[ftype].fdMode)
                             fsearch = ASCII_SPC;
                         else if (Menukey.vk<=fabgl::VK_9)

@@ -551,7 +551,7 @@ void Tape::TZX_GetBlock() {
 
     int tapeData;
     short jumpDistance;
-    char cswFileName[32]; // Nombre del archivo descomprimido
+    char cswFileName[64]; // Nombre del archivo descomprimido
 
     for (;;) {
 

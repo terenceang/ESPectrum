@@ -340,7 +340,7 @@ int FileUtils::getDirStats(const string& filedir, const vector<string>& filexts,
     *hash = 0; // Name checksum variable
     unsigned long high;
     DIR* dir;
-    struct dirent* de;
+    struct dirent* de = nullptr;
 
     *elements = 0;
     *ndirs = 0;
@@ -355,7 +355,7 @@ int FileUtils::getDirStats(const string& filedir, const vector<string>& filexts,
                         // Calculate name checksum
                         for (int i = 0; i < fname.length(); i++) {
                             *hash = (*hash << 4) + fname[i];
-                            if (high = *hash & 0xF0000000) *hash ^= high >> 24;
+                            if ((high = *hash & 0xF0000000)) *hash ^= high >> 24;
                             *hash &= ~high;
                         }
                         if (de->d_type == DT_REG)
@@ -440,7 +440,7 @@ void FileUtils::DirToFile(string fpath, uint8_t ftype, unsigned long hash, unsig
     OSD::progressDialog(OSD_FILE_INDEXING[Config::lang],OSD_FILE_INDEXING_1[Config::lang],0,0);
 
     int items_processed = 0;
-    struct dirent* de;
+    struct dirent* de = nullptr;
 
     OSD::elements = 0;
     OSD::ndirs = 0;

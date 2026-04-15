@@ -642,7 +642,7 @@ for (int n = m; n < m + 12; n++) {
         // Save to config (only changes)
         if (Config::joydef[n] != (uint16_t) ESPectrum::JoyVKTranslation[n]) {
             Config::joydef[n] = (uint16_t) ESPectrum::JoyVKTranslation[n];
-            char joykey[9];
+            char joykey[32];
             snprintf(joykey, sizeof(joykey), "joydef%02u", n);
             Config::save(joykey);
             // printf("%s %u\n",joykey, joydef[n]);

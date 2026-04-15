@@ -203,7 +203,7 @@ IRAM_ATTR void _do(rvmWD1793 *wd) {
 
         wd->led = 1; // RVM plays seek audio sample here
 
-        wd->c=(srate[(wd->control & kRVMWD177XRateSelect) ^ 0x4][wd->command & 0x3]) >> 3; // Value for 1 bit per diskstep / 8
+        wd->c = (srate[((wd->control & kRVMWD177XRateSelect) ^ 0x4)][(wd->command & 0x3)]) >> 3; // Value for 1 bit per diskstep / 8
 
         // printf("wd->c: %d, RateSelect: %d\n",wd->c,(wd->control & kRVMWD177XRateSelect) ^ 0x4);
         //printf("RATE: %llu\n",wd->c);

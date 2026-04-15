@@ -54,6 +54,8 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include "esp_efuse.h"
 #include "soc/efuse_reg.h"
 
+#include <unistd.h>
+
 #include "fabgl.h"
 
 #include "rtc_wdt.h"
@@ -102,8 +104,8 @@ unsigned int OSD::SaveRectpos = 0;
 unsigned short OSD::scrW = 320;
 unsigned short OSD::scrH = 240;
 
-char OSD::stats_lin1[25]; // "CPU: 00000 / IDL: 00000 ";
-char OSD::stats_lin2[25]; // "FPS:000.00 / FND:000.00 ";
+char OSD::stats_lin1[64]; // "CPU: 00000 / IDL: 00000 ";
+char OSD::stats_lin2[64]; // "FPS:000.00 / FND:000.00 ";
 
 // // X origin to center an element with pixel_width
 unsigned short OSD::scrAlignCenterX(unsigned short pixel_width) { return (scrW / 2) - (pixel_width / 2); }
@@ -222,7 +224,7 @@ void OSD::drawOSD(bool bottom_info) {
 
 void OSD::drawKbdLayout(uint8_t layout) {
 
-    uint8_t *layoutdata;
+    uint8_t *layoutdata = (uint8_t *)Layout_ZX;
 
     string vmode;
 
@@ -351,6 +353,9 @@ void OSD::drawKbdLayout(uint8_t layout) {
             case fabgl::VK_Z:
             case fabgl::VK_z:
                 layout = 3;
+                break;
+            default:
+                break;
         };
 
         drawWindow(256 + 8, 176 + 18, "", bottom[layout], false);
@@ -397,7 +402,7 @@ static bool newpersistSave(string fname) {
                 }
             } else nfile = "SAVE";
 
-            char persistfname[9] = { 0 };
+            char persistfname[16] = { 0 };
 
             int i = 1;
             while(1) {
@@ -3809,9 +3814,9 @@ esp_err_t OSD::updateROM(FILE *customrom, uint8_t arch) {
     int sindex = 0;
     int sindextk = 0;
     int sindex128 = 0;
-    uint32_t rom_off;
-    uint32_t rom_off_tk;
-    uint32_t rom_off_128;
+    uint32_t rom_off = 0;
+    uint32_t rom_off_tk = 0;
+    uint32_t rom_off_128 = 0;
 
     uint8_t magic[8] =	{ 0x45, 0x53, 0x50, 0x52, 0x00, 0x34, 0x38, 0x4B }; // MAGIC -> "ESPR_48K" ;
     uint8_t magictk[8] =	{ 0x45, 0x53, 0x50, 0x52, 0x00, 0x54, 0x4B, 0x58 }; // MAGIC -> "ESPR_TKX" ;
@@ -4227,7 +4232,7 @@ esp_err_t OSD::updateROM(FILE *customrom, uint8_t arch) {
     // progressDialog("","",0,2);
 
     // return result;
-
+    return ESP_OK;
 }
 
 esp_err_t OSD::updateFirmware(FILE *firmware) {
@@ -4320,7 +4325,7 @@ esp_err_t OSD::updateFirmware(FILE *firmware) {
 
     // Firmware written: reboot
     OSD::esp_hard_reset();
-
+    return ESP_OK;
 }
 
 void OSD::progressDialog(string title, string msg, int percent, int action) {
@@ -5228,8 +5233,8 @@ void OSD::joyDialog(uint8_t joynum) {
                                     if (Config::joydef[n] != (uint16_t) joyDropdown[n - m][6]) {
                                         ESPectrum::JoyVKTranslation[n] = (fabgl::VirtualKey) joyDropdown[n - m][6];
                                         Config::joydef[n] = (uint16_t) joyDropdown[n - m][6];
-                                        char joykey[9];
-                                        sprintf(joykey,"joydef%02u",n);
+                                        char joykey[32];
+                                        snprintf(joykey, sizeof(joykey), "joydef%02u", n);
                                         Config::save(joykey);
                                         // printf("%s %u\n",joykey, joydef[n]);
                                     }
@@ -5912,6 +5917,7 @@ string OSD::input(int x, int y, string inputLabel, string text, int inputSize, i
                             case fabgl::VK_8        : ascii = '('; break; /**< Left parenthesis: ( */
                             case fabgl::VK_9        : ascii = ')'; break; /**< Right parenthesis: ) */
                             case fabgl::VK_0        : ascii = '_'; break; /**< Underscore: _ */
+                            default: break;
 
                             case fabgl::VK_r        :
                             case fabgl::VK_R        : ascii = '<'; break; /**< Less: < */
@@ -5959,6 +5965,7 @@ string OSD::input(int x, int y, string inputLabel, string text, int inputSize, i
                             case fabgl::VK_M        : ascii = '.'; break; /**< Period: . */
 
                         }
+                        // Additional keys not explicitly handled should be ignored
 
                     } else {
                         switch (Nextkey.vk) {
@@ -5985,6 +5992,7 @@ string OSD::input(int x, int y, string inputLabel, string text, int inputSize, i
 
                             case fabgl::VK_p        :
                             case fabgl::VK_P        : ascii = 0x7f; break; /**< copyright symbol > */
+                            default: break;
 
                         }
                     }

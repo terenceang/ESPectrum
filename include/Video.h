@@ -36,11 +36,83 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #define VIDEO_h
 
 #include <inttypes.h>
+#include <string>
 
 #define USE_LCD 1
 
 #include "ESPectrum.h"
+#define NO_VGA_STUB
+// Minimal VGA stub to remove hardware VGA dependency when not used.
+// This provides the surface API expected by the code but performs no hardware operations.
+
+#ifndef NO_VGA_STUB
+// Real VGA driver include kept for boards that require it — define NO_VGA_STUB to use the stub.
 #include "ESP32Lib/VGA/VGA6Bit.h"
+#else
+class Font; // forward
+
+class VGA6Bit {
+public:
+  // Interrupt handler present in Video.cpp
+  void interrupt(void *arg);
+
+  VGA6Bit() : xres(320), RGBAXMask(0xFFFFFFFF), SBits(0), VGA6Bit_useinterrupt(false), CenterH(0), CenterV(0) {
+    for (size_t i = 0; i < frameBufferSize; ++i) frameBuffer[i] = nullptr;
+  }
+  void init(int /*mode*/, const int */*redPins*/, const int */*grePins*/, const int */*bluPins*/, int /*hsync*/, int /*vsync*/, int /*clockPin*/ = -1, bool /*useOutput*/ = true) {}
+  void setFont(const Font &/*f*/) {}
+  void setCodepage(int /*cp*/) {}
+  void allocateLineBuffers(void **/*fb*/) {}
+
+  // Basic 2D/text API used by OSD; all no-ops in stub
+  void print(const char * /*s*/) {}
+  void print(const std::string & /*s*/) {}
+  void println(const char *s) { print(s); }
+  void println(const std::string &s) { print(s); }
+  void print(char c) { char s[2] = { c, '\0' }; print(s); }
+  void println(char c) { char s[2] = { c, '\0' }; print(s); }
+  void dotFast(int /*x*/, int /*y*/, uint32_t /*color*/) {}
+  void drawChar_offset(int /*x*/, int /*y*/, int /*ch*/, int /*offset*/) {}
+  void clear(uint32_t /*color*/) {}
+  void setTextColor(uint32_t /*fg*/, uint32_t /*bg*/) {}
+  void setCursor(int /*x*/, int /*y*/) {}
+  void circle(int /*x*/, int /*y*/, int /*r*/, uint32_t /*color*/) {}
+  void rect(int /*x*/, int /*y*/, int /*w*/, int /*h*/, uint32_t /*color*/) {}
+  void fillRect(int /*x*/, int /*y*/, int /*w*/, int /*h*/, uint32_t /*color*/) {}
+  void line(int /*x1*/, int /*y1*/, int /*x2*/, int /*y2*/, uint32_t /*color*/) {}
+
+  static constexpr size_t frameBufferSize = 1024;
+  void *frameBuffer[frameBufferSize];
+  int xres;
+  uint32_t RGBAXMask;
+  uint32_t SBits;
+  bool VGA6Bit_useinterrupt;
+  int CenterH;
+  int CenterV;
+};
+// When the real VGA driver is not used we still need definitions used by Video.cpp
+enum vmodeproperties {
+  hRes = 0,
+  vRes = 1,
+  vDiv = 2,
+  hFront = 3,
+  hSync = 4,
+  hBack = 5,
+  vFront = 6,
+  vSync = 7,
+  vBack = 8,
+  r0sdm2 = 9,
+  r0odiv = 10,
+  r1sdm0 = 11,
+  r1sdm1 = 12,
+  r1sdm2 = 13,
+  r1odiv = 14,
+  hSyncPolarity = 15,
+  vSyncPolarity = 16
+};
+
+extern const unsigned short int vidmodes[][17];
+#endif
 #ifdef USE_LCD
 #include "LCDDisplay.h"
 #endif
@@ -113,7 +185,7 @@ const int redPins[] = {RED_PINS_6B};
 const int grePins[] = {GRE_PINS_6B};
 const int bluPins[] = {BLU_PINS_6B};
 
-#define zxColor(color,bright) VIDEO::spectrum_colors[bright ? color + 8 : color]
+#define zxColor(color,bright) (VIDEO::spectrum_colors[(bright) ? ((color) + 8) : (color)])
 
 class VIDEO
 {
