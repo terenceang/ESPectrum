@@ -1,6 +1,5 @@
 #include "Video.h"   // must come first — defines USE_LCD
 #include "LCDDisplay.h"
-#ifdef USE_LCD
 
 #include "esp_heap_caps.h"
 #include "esp_memory_utils.h"
@@ -57,8 +56,8 @@ static void ili9341_init() {
     lcd_cmd(0xC5, p_c5, sizeof(p_c5));           // VCom Control 1
     const uint8_t p_c7[] = {0x86};
     lcd_cmd(0xC7, p_c7, sizeof(p_c7));           // VCom Control 2
-    const uint8_t p_36[] = {0xA8};
-    lcd_cmd(0x36, p_36, sizeof(p_36));           // MADCTL: landscape (MV+BGR, MY=1)
+    const uint8_t p_36[] = {0xE8};
+    lcd_cmd(0x36, p_36, sizeof(p_36));           // MADCTL: landscape (MV+BGR, MY=1) + MX (horizontal flip)
     const uint8_t p_3a[] = {0x55};
     lcd_cmd(0x3A, p_3a, sizeof(p_3a));           // 16-bit colour
     const uint8_t p_b1[] = {0x00,0x18};
@@ -172,28 +171,36 @@ void LCDDisplay::Flush() {
     const int srcY   = (srcHeight > ACTIVE_H) ? (srcHeight - ACTIVE_H) / 2 : 0;
     const int width  = (srcWidth  > ACTIVE_W) ? ACTIVE_W : srcWidth;
     const int height = (srcHeight > ACTIVE_H) ? ACTIVE_H : srcHeight;
-
+    // Render and transfer the visible region in vertical "strips" so the
+    // transfer buffer fits in RAM/DMA limits. Each strip is up to STRIP_HEIGHT
+    // scanlines tall.
     for (int stripY = 0; stripY < height; stripY += STRIP_HEIGHT) {
+        // Height of this strip (may be smaller at bottom edge).
         const int thisStripH = (stripY + STRIP_HEIGHT > height) ? height - stripY : STRIP_HEIGHT;
+
+        // Convert each source scanline in the strip into the 16-bit RGB565
+        // stripBuffer expected by the ILI9341. Video framebuffer stores one
+        // byte per pixel; convertPixel() maps that to big-endian RGB565.
         for (int line = 0; line < thisStripH; ++line) {
             uint8_t *srcLine = (uint8_t *)VIDEO::vga.frameBuffer[stripY + line + srcY];
-            if (!srcLine) srcLine = dummy_line;
+            if (!srcLine) srcLine = dummy_line; // fallback to a blank line
             uint16_t *dst = stripBuffer + line * ACTIVE_W;
+
+            // Copy and convert visible pixels. The source X coordinate is
+            // offset by srcX and XOR'd with 2 (hardware/format alignment).
             for (int x = 0; x < width; ++x)
                 dst[x] = convertPixel(srcLine[(x + srcX) ^ 2]);
+
+            // Fill any remaining pixels on the scanline (right side) with
+            // black (0) so the full ACTIVE_W width is always transmitted.
             for (int x = width; x < ACTIVE_W; ++x)
                 dst[x] = 0;
         }
+
+        // Tell the LCD which rectangle we're about to update and send the
+        // strip's pixel data. Command 0x2C is the memory write (RAMWR).
         set_addr_window(OFFSET_X, OFFSET_Y + stripY, ACTIVE_W, thisStripH);
         esp_lcd_panel_io_tx_color(io_handle, 0x2C, stripBuffer,
                                    ACTIVE_W * thisStripH * sizeof(uint16_t));
     }
 }
-
-#else
-
-// No-op stubs for headless (non-LCD) builds.
-void LCDDisplay::Init()  {}
-void LCDDisplay::Flush() {}
-
-#endif
