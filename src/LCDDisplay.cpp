@@ -18,7 +18,7 @@ static const int OFFSET_X     = 0;
 static const int OFFSET_Y     = 0;
 static const int ACTIVE_W     = LCD_WIDTH;
 static const int ACTIVE_H     = LCD_HEIGHT;
-static const int STRIP_HEIGHT = 48;
+static const int STRIP_WIDTH  = 48;
 
 static const int PIN_MOSI = 21;
 static const int PIN_SCLK = 12;
@@ -90,14 +90,18 @@ static void set_addr_window(int x, int y, int w, int h) {
     esp_lcd_panel_io_tx_param(io_handle, 0x2B, row, sizeof(row));
 }
 
-// Returns RGB565 big-endian — ILI9341 expects MSB first over SPI.
-static uint16_t convertPixel(uint8_t pixel) {
-    uint8_t color = pixel & 0x3F;
-    uint8_t r2 = color & 0x03;
-    uint8_t g2 = (color >> 2) & 0x03;
-    uint8_t b2 = (color >> 4) & 0x03;
-    uint16_t rgb = (uint16_t)(((r2 * 31 / 3) << 11) | ((g2 * 63 / 3) << 5) | (b2 * 31 / 3));
-    return __builtin_bswap16(rgb);
+// Precomputed 6-bit colour → RGB565 big-endian lookup table.
+// Built once in Init(); indexed by (pixel & 0x3F).
+static uint16_t pixelLUT[64];
+
+static void buildPixelLUT() {
+    for (int i = 0; i < 64; ++i) {
+        uint8_t r2 = i & 0x03;
+        uint8_t g2 = (i >> 2) & 0x03;
+        uint8_t b2 = (i >> 4) & 0x03;
+        uint16_t rgb = (uint16_t)(((r2 * 31 / 3) << 11) | ((g2 * 63 / 3) << 5) | (b2 * 31 / 3));
+        pixelLUT[i] = __builtin_bswap16(rgb);
+    }
 }
 
 static uint8_t dummy_line[LCD_WIDTH] = {0};
@@ -114,8 +118,12 @@ void LCDDisplay::Init() {
     bus_cfg.sclk_io_num = PIN_SCLK;
     bus_cfg.quadwp_io_num = -1;
     bus_cfg.quadhd_io_num = -1;
-    bus_cfg.max_transfer_sz = ACTIVE_W * STRIP_HEIGHT * sizeof(uint16_t);
-    spi_bus_initialize(LCD_SPI_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
+    bus_cfg.max_transfer_sz = STRIP_WIDTH * ACTIVE_H * sizeof(uint16_t);
+    esp_err_t ret = spi_bus_initialize(LCD_SPI_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
+    if (ret != ESP_OK) {
+        printf("[LCD] ERROR: spi_bus_initialize failed: %d\n", ret);
+        return;
+    }
 
     esp_lcd_panel_io_spi_config_t io_cfg = {};
     io_cfg.dc_gpio_num      = PIN_DC;
@@ -126,12 +134,17 @@ void LCDDisplay::Init() {
     io_cfg.spi_mode         = 0;
     io_cfg.trans_queue_depth = 10;
     // on_color_trans_done left NULL → esp_lcd_panel_io_tx_color blocks until done
-    esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_SPI_HOST, &io_cfg, &io_handle);
+    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_SPI_HOST, &io_cfg, &io_handle);
+    if (ret != ESP_OK) {
+        printf("[LCD] ERROR: esp_lcd_new_panel_io_spi failed: %d\n", ret);
+        return;
+    }
 
     XL9535::init();
     XL9535::setBacklight(true);
 
     ili9341_init();
+    buildPixelLUT();
 
     // Allocate frame line buffers so Video.cpp can render into them.
     // One pointer per scanline; try PSRAM first to preserve internal DRAM.
@@ -150,7 +163,8 @@ void LCDDisplay::Init() {
         }
     }
 
-    size_t allocCount = (size_t)ACTIVE_W * STRIP_HEIGHT;
+    // Vertical strip buffer: STRIP_WIDTH columns × ACTIVE_H rows (worst-case).
+    size_t allocCount = (size_t)STRIP_WIDTH * ACTIVE_H;
     stripBuffer = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * allocCount,
                                                 MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     if (!stripBuffer)
@@ -171,36 +185,52 @@ void LCDDisplay::Flush() {
     const int srcY   = (srcHeight > ACTIVE_H) ? (srcHeight - ACTIVE_H) / 2 : 0;
     const int width  = (srcWidth  > ACTIVE_W) ? ACTIVE_W : srcWidth;
     const int height = (srcHeight > ACTIVE_H) ? ACTIVE_H : srcHeight;
-    // Render and transfer the visible region in vertical "strips" so the
-    // transfer buffer fits in RAM/DMA limits. Each strip is up to STRIP_HEIGHT
-    // scanlines tall.
-    for (int stripY = 0; stripY < height; stripY += STRIP_HEIGHT) {
-        // Height of this strip (may be smaller at bottom edge).
-        const int thisStripH = (stripY + STRIP_HEIGHT > height) ? height - stripY : STRIP_HEIGHT;
+    // Render and transfer the visible region in vertical strips (left→right).
+    // Each strip is up to STRIP_WIDTH pixels wide and covers `height` rows.
+    const int maxStripW = STRIP_WIDTH;
+    for (int stripX = 0; stripX < width; stripX += maxStripW) {
+        // Width of this strip (may be smaller at the right edge).
+        const int thisStripW = (stripX + maxStripW > width) ? width - stripX : maxStripW;
 
-        // Convert each source scanline in the strip into the 16-bit RGB565
-        // stripBuffer expected by the ILI9341. Video framebuffer stores one
-        // byte per pixel; convertPixel() maps that to big-endian RGB565.
-        for (int line = 0; line < thisStripH; ++line) {
-            uint8_t *srcLine = (uint8_t *)VIDEO::vga.frameBuffer[stripY + line + srcY];
-            if (!srcLine) srcLine = dummy_line; // fallback to a blank line
-            uint16_t *dst = stripBuffer + line * ACTIVE_W;
+        // Fill the strip buffer row by row (top→bottom). The LCD expects
+        // pixels in row-major order (left→right, top→bottom) for the
+        // specified rectangle, so we build the buffer as [row0 pixels][row1...].
+        for (int y = 0; y < height; ++y) {
+            uint8_t *srcLine = (uint8_t *)VIDEO::vga.frameBuffer[y + srcY];
+            if (!srcLine) srcLine = dummy_line;
+            uint16_t *dstRow = stripBuffer + (size_t)y * thisStripW;
 
-            // Copy and convert visible pixels. The source X coordinate is
-            // offset by srcX and XOR'd with 2 (hardware/format alignment).
-            for (int x = 0; x < width; ++x)
-                dst[x] = convertPixel(srcLine[(x + srcX) ^ 2]);
-
-            // Fill any remaining pixels on the scanline (right side) with
-            // black (0) so the full ACTIVE_W width is always transmitted.
-            for (int x = width; x < ACTIVE_W; ++x)
-                dst[x] = 0;
+            for (int x = 0; x < thisStripW; ++x) {
+                // Source X is offset by srcX and XOR'd with 2 for alignment.
+                dstRow[x] = pixelLUT[srcLine[(stripX + x + srcX) ^ 2] & 0x3F];
+            }
         }
 
-        // Tell the LCD which rectangle we're about to update and send the
-        // strip's pixel data. Command 0x2C is the memory write (RAMWR).
-        set_addr_window(OFFSET_X, OFFSET_Y + stripY, ACTIVE_W, thisStripH);
+        // Update the LCD rectangle and send the prepared strip buffer.
+        set_addr_window(OFFSET_X + stripX, OFFSET_Y, thisStripW, height);
         esp_lcd_panel_io_tx_color(io_handle, 0x2C, stripBuffer,
-                                   ACTIVE_W * thisStripH * sizeof(uint16_t));
+                                   (size_t)thisStripW * height * sizeof(uint16_t));
+    }
+
+    // Clear any unused columns on the right side of the LCD.
+    if (width < ACTIVE_W) {
+        const int clearW = ACTIVE_W - width;
+        const size_t clearSize = (size_t)clearW * height * sizeof(uint16_t);
+        memset(stripBuffer, 0, clearSize);
+        set_addr_window(OFFSET_X + width, OFFSET_Y, clearW, height);
+        esp_lcd_panel_io_tx_color(io_handle, 0x2C, stripBuffer, clearSize);
+    }
+
+    // Clear any unused rows at the bottom of the LCD.
+    if (height < ACTIVE_H) {
+        const int clearH = ACTIVE_H - height;
+        // Clear in strips to stay within buffer limits.
+        for (int stripX = 0; stripX < ACTIVE_W; stripX += maxStripW) {
+            const int sw = (stripX + maxStripW > ACTIVE_W) ? ACTIVE_W - stripX : maxStripW;
+            const size_t sz = (size_t)sw * clearH * sizeof(uint16_t);
+            memset(stripBuffer, 0, sz);
+            set_addr_window(OFFSET_X + stripX, OFFSET_Y + height, sw, clearH);
+            esp_lcd_panel_io_tx_color(io_handle, 0x2C, stripBuffer, sz);
+        }
     }
 }
