@@ -437,27 +437,7 @@ void Tape::TAP_getBlockData() {
             if (flagByte == 0 && tapeBlkLen == 19) { // This is a header.
 
                 // Get the block type.
-                TapeBlock::BlockType dataBlockType;
                 uint8_t blocktype = readByteFile(tape);
-                switch (blocktype)
-                {
-                    case 0:
-                        dataBlockType = TapeBlock::BlockType::Program_header;
-                        break;
-
-                    case 1:
-                        dataBlockType = TapeBlock::BlockType::Number_array_header;
-                        break;
-                    case 2:
-                        dataBlockType = TapeBlock::BlockType::Character_array_header;
-                        break;
-                    case 3:
-                        dataBlockType = TapeBlock::BlockType::Code_header;
-                        break;
-                    default:
-                        dataBlockType = TapeBlock::BlockType::Unassigned;
-                        break;
-                }
 
                 // Get the filename.
                 string fname = "";
@@ -473,8 +453,8 @@ void Tape::TAP_getBlockData() {
 
                 fseek(tape,6,SEEK_CUR);
 
-                // Get the checksum.
-                uint8_t checksum = readByteFile(tape);
+                // Skip checksum byte.
+                (void)readByteFile(tape);
 
                 if ((tapeListIndex & (TAPE_LISTING_DIV - 1)) == 0) {
                     block.StartPosition = tapeContentIndex;
@@ -483,26 +463,13 @@ void Tape::TAP_getBlockData() {
 
             } else {
 
-                // Get the block content length.
-                int contentLength;
-                int contentOffset;
-                if (tapeBlkLen >= 2) {
-                    // Normally the content length equals the block length minus two
-                    // (the flag byte and the checksum are not included in the content).
-                    contentLength = tapeBlkLen - 2;
-                    // The content is found at an offset of 3 (two byte block size + one flag byte).
-                    contentOffset = 3;
-                } else {
-                    // Fragmented data doesn't have a flag byte or a checksum.
-                    contentLength = tapeBlkLen;
-                    // The content is found at an offset of 2 (two byte block size).
-                    contentOffset = 2;
-                }
+                // Content length = block length minus flag byte and checksum (if present).
+                int contentLength = (tapeBlkLen >= 2) ? tapeBlkLen - 2 : tapeBlkLen;
 
-                fseek(tape,contentLength,SEEK_CUR);
+                fseek(tape, contentLength, SEEK_CUR);
 
-                // Get the checksum.
-                uint8_t checksum = readByteFile(tape);
+                // Skip checksum byte.
+                (void)readByteFile(tape);
 
                 if ((tapeListIndex & (TAPE_LISTING_DIV - 1)) == 0) {
                     block.StartPosition = tapeContentIndex;

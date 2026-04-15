@@ -96,7 +96,6 @@ static unsigned int tstateDraw; // Drawing start point (in Tstates)
 static unsigned int linedraw_cnt;
 static unsigned int lin_end, lin_end2 /*, lin_end3*/;
 static unsigned int coldraw_cnt;
-static unsigned int col_end;
 static unsigned int video_rest;
 static unsigned int video_opcode_rest;
 static unsigned int curline;
@@ -859,7 +858,6 @@ IRAM_ATTR void VIDEO::MainScreen_Snow(unsigned int statestoadd, bool contended) 
 IRAM_ATTR void VIDEO::MainScreen_Snow_Opcode(bool contended) {
 
     int snow_effect = 0;
-    unsigned int addr;
     bool do_stats = false;
 
     unsigned int statestoadd = video_opcode_rest ? video_opcode_rest : 4;

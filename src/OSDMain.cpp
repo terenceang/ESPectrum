@@ -448,13 +448,6 @@ static bool newpersistLoad(string fname) {
 
 }
 
-static string getStringPersistCatalog() {
-    string catalog = "";
-    for(int i=1; i <= 100; i++) {
-        catalog += (Config::lang == 1 ? "Ranura " : "Slot ") + to_string(i) + "\n";
-    }
-    return catalog;
-}
 
 // *******************************************************************************************************
 // PREFERRED ROM MENU
@@ -580,7 +573,6 @@ void OSD::pref_rom_menu() {
 // OSD Main Loop
 void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool CTRL, bool SHIFT) {
 
-    static uint8_t last_sna_row = 0;
     fabgl::VirtualKeyItem Nextkey;
 
     // Pause Audio-in if needed
@@ -3264,12 +3256,6 @@ void OSD::AboutDlg() {
         pos_y = Config::aspect_16_9 ? 57 : 77;
     }
 
-    int msgIndex = 0; int msgChar = 0;
-    int msgDelay = 0; int cursorBlink = 16; int nextChar = 0;
-    uint16_t cursorCol = zxColor(7,1);
-    uint16_t cursorCol2 = zxColor(1,0);
-
-
     #define ABOUTLINES 16
     int curline = -ABOUTLINES;
 
@@ -3511,7 +3497,6 @@ void OSD::osdCenteredMsg(string msg, uint8_t warn_level, uint16_t millispause) {
     const unsigned short y = scrAlignCenterY(h);
     unsigned short paper;
     unsigned short ink;
-    unsigned int j;
 
     if (msg.length() > (scrW / 6) - 10) msg = msg.substr(0,(scrW / 6) - 10);
 
@@ -4009,15 +3994,13 @@ esp_err_t OSD::updateROM(FILE *customrom, uint8_t arch) {
         return result;
     }
 
-    size_t bytesread;
-
     if (arch == 1) {
 
         progressDialog("","",50,1);
 
         // Inject new 48K custom ROM
         for (int i=0; i < 0x4000; i += FWBUFFSIZE ) {
-            bytesread = fread(data, 1, FWBUFFSIZE , customrom);
+            (void)fread(data, 1, FWBUFFSIZE, customrom);
             result = esp_partition_write(target, rom_off + i, data, FWBUFFSIZE);
             if (result != ESP_OK) {
                 printf("esp_partition_write failed, err=0x%x.\n", result);
@@ -4072,7 +4055,7 @@ esp_err_t OSD::updateROM(FILE *customrom, uint8_t arch) {
 
         // Inject new 128K custom ROM part 1
         for (int i=0; i < 0x4000; i += FWBUFFSIZE) {
-            bytesread = fread(data, 1, FWBUFFSIZE , customrom);
+            (void)fread(data, 1, FWBUFFSIZE, customrom);
             result = esp_partition_write(target, rom_off_128 + i, data, FWBUFFSIZE);
             if (result != ESP_OK) {
                 printf("esp_partition_write failed, err=0x%x.\n", result);
@@ -4090,7 +4073,7 @@ esp_err_t OSD::updateROM(FILE *customrom, uint8_t arch) {
                 for (int n=0;n<FWBUFFSIZE;n++)
                     data[n] = gb_rom_1_sinclair_128k[i + n];
             } else {
-                bytesread = fread(data, 1, FWBUFFSIZE , customrom);
+                (void)fread(data, 1, FWBUFFSIZE, customrom);
             }
 
             result = esp_partition_write(target, rom_off_128 + i + 0x4000, data, FWBUFFSIZE);
@@ -4148,7 +4131,7 @@ esp_err_t OSD::updateROM(FILE *customrom, uint8_t arch) {
 
         // Inject new TK custom ROM
         for (int i=0; i < 0x4000; i += FWBUFFSIZE ) {
-            bytesread = fread(data, 1, FWBUFFSIZE , customrom);
+            (void)fread(data, 1, FWBUFFSIZE, customrom);
             result = esp_partition_write(target, rom_off_tk + i, data, FWBUFFSIZE);
             if (result != ESP_OK) {
                 printf("esp_partition_write failed, err=0x%x.\n", result);
@@ -4336,8 +4319,6 @@ void OSD::progressDialog(string title, string msg, int percent, int action) {
     static unsigned short x;
     static unsigned short progress_x;
     static unsigned short progress_y;
-    static unsigned int j;
-
     bool curr_menu_saverect = menu_saverect;
 
     if (action == 0 ) { // SHOW
@@ -5407,8 +5388,6 @@ void OSD::pokeDialog() {
     for (int i=0;i<9;i++) Bankmenu += BankCombo[i] + "\n";
 
     int curObject = 0;
-    uint8_t dlgMode = 0; // 0 -> Move, 1 -> Input
-
     const unsigned short h = (OSD_FONT_H * 10) + 2;
     const unsigned short y = scrAlignCenterY(h) - 8;
 

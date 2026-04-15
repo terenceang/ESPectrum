@@ -258,7 +258,6 @@ void Tape::TZX_BlockLen(TZXBlock &blockdata) {
 
 string Tape::tzxBlockReadData(int Blocknum) {
 
-    int tapeContentIndex = 0;
     int tapeBlkLen = 0;
     string blktype;
     char buf[48];
@@ -266,7 +265,7 @@ string Tape::tzxBlockReadData(int Blocknum) {
 
     TZXBlock TZXblock;
 
-    tapeContentIndex = Tape::CalcTZXBlockPos(Blocknum);
+    (void)Tape::CalcTZXBlockPos(Blocknum);
     TZX_BlockLen(TZXblock);
     tapeBlkLen = TZXblock.BlockLenght;
 

@@ -1,10 +1,8 @@
-#include "../include/Video.h"
+#include "../include/Video.h"  // must come first — defines USE_LCD
+#include "LCDDisplay.h"
 
-// Provide minimal no-op implementations for LCDDisplay used in headless builds.
-// Include Video.h so `USE_LCD` and class declarations are active.
-#ifdef USE_LCD
-void LCDDisplay::Init() {}
+// No-op stubs for headless (non-LCD) builds.
+#ifndef USE_LCD
+void LCDDisplay::Init()  {}
 void LCDDisplay::Flush() {}
-
-uint16_t LCDDisplay::convertPixel(uint8_t pixel) { return (uint16_t)pixel; }
 #endif

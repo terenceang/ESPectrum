@@ -121,22 +121,20 @@ bool FileUtils::mountSDCard(int PIN_MISO, int PIN_MOSI, int PIN_CLK, int PIN_CS)
     // Init SD Card
     esp_err_t ret;
 
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false,
-        .max_files = 8,
-        .allocation_unit_size = 16 * 1024
-    };
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {};
+    mount_config.format_if_mount_failed = false;
+    mount_config.max_files = 8;
+    mount_config.allocation_unit_size = 16 * 1024;
 
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 
-    spi_bus_config_t bus_cfg = {
-        .mosi_io_num = PIN_MOSI,
-        .miso_io_num = PIN_MISO,
-        .sclk_io_num = PIN_CLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 2048 /*4000*/,
-    };
+    spi_bus_config_t bus_cfg = {};
+    bus_cfg.mosi_io_num = PIN_MOSI;
+    bus_cfg.miso_io_num = PIN_MISO;
+    bus_cfg.sclk_io_num = PIN_CLK;
+    bus_cfg.quadwp_io_num = -1;
+    bus_cfg.quadhd_io_num = -1;
+    bus_cfg.max_transfer_sz = 2048;
 
     ret = spi_bus_initialize(SPI2_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {
@@ -147,15 +145,12 @@ bool FileUtils::mountSDCard(int PIN_MISO, int PIN_MOSI, int PIN_CLK, int PIN_CS)
 
     vTaskDelay(20 / portTICK_PERIOD_MS);
 
-    sdspi_device_config_t slot_config =  {
-    .host_id   = SDSPI_DEFAULT_HOST,
-    .gpio_cs   = GPIO_NUM_13,
-    .gpio_cd   = SDSPI_SLOT_NO_CD,
-    .gpio_wp   = SDSPI_SLOT_NO_WP,
-    .gpio_int  = GPIO_NUM_NC, \
-    };
-    slot_config.gpio_cs = (gpio_num_t) PIN_CS;
+    sdspi_device_config_t slot_config = {};
     slot_config.host_id = SPI2_HOST;
+    slot_config.gpio_cs = (gpio_num_t) PIN_CS;
+    slot_config.gpio_cd = SDSPI_SLOT_NO_CD;
+    slot_config.gpio_wp = SDSPI_SLOT_NO_WP;
+    slot_config.gpio_int = GPIO_NUM_NC;
 
     ret = esp_vfs_fat_sdspi_mount(MOUNT_POINT_SD, &host, &slot_config, &mount_config, &FileUtils::card);
     if (ret != ESP_OK) {

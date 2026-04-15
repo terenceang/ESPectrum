@@ -719,9 +719,13 @@ void ESPectrum::setup() {
     //=======================================================================================
 
     MemESP::Init();
+    printf("[BOOT] PSRAM: %dKB  RAM banks: rom[0]=%p ram[0]=%p ram[5]=%p\n",
+           Config::psram_size, MemESP::rom[0], MemESP::ram[0], MemESP::ram[5]);
 
     // Load romset
     Config::requestMachine(Config::arch, Config::romSet);
+    printf("[BOOT] ROM loaded: arch=%s romset=%s rom[0]=%p\n",
+           Config::arch.c_str(), Config::romSet.c_str(), MemESP::rom[0]);
 
     MemESP::Reset();
 

@@ -176,9 +176,9 @@ enum ConfigType {
 };
 
 struct ConfigEntry {
-    char* key;
+    const char* key;
     ConfigType type;
-    void* value;  // Pointer to the configuration value
+    void* value;
 };
 
 // Define the array of configuration entries

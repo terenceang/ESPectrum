@@ -18,6 +18,7 @@
 #include "soc/i2s_struct.h"
 #include "soc/io_mux_reg.h"
 #include "driver/gpio.h"
+#include "esp_private/periph_ctrl.h"
 #include "rom/lldesc.h"
 #include "DMABufferDescriptor.h"
 

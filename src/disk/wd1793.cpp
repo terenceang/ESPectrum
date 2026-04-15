@@ -1558,7 +1558,6 @@ bool rvmWD1793InsertDisk(rvmWD1793 *wd, unsigned char UnitNum, std::string Filen
       fseek(wd->disk[UnitNum]->Diskfile, 0, SEEK_END);
       long diskbytes = ftell(wd->disk[UnitNum]->Diskfile);
       if( diskbytes > wd->disk[UnitNum]->sides * wd->disk[UnitNum]->tracks * 16 * 256 ) {
-        int i;
         for( int i = wd->disk[UnitNum]->tracks + 1; i < 83; i++ ) {
           if( wd->disk[UnitNum]->sides * i * 16 * 256 >= diskbytes ) {
             wd->disk[UnitNum]->tracks = i;
