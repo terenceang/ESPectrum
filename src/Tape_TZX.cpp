@@ -551,7 +551,7 @@ void Tape::TZX_GetBlock() {
 
     int tapeData;
     short jumpDistance;
-    char cswFileName[16]; // Nombre del archivo descomprimido
+    char cswFileName[32]; // Nombre del archivo descomprimido
 
     for (;;) {
 
@@ -787,7 +787,7 @@ void Tape::TZX_GetBlock() {
                     // printf(MOUNT_POINT_SD "/.csw%04d.tmp\n",tapeCurBlock);
 
                     // Open csw file
-                    sprintf(cswFileName,MOUNT_POINT_SD "/.csw%04d.tmp",tapeCurBlock);
+                    snprintf(cswFileName, sizeof(cswFileName), MOUNT_POINT_SD "/.csw%04d.tmp", tapeCurBlock);
                     cswBlock = fopen(cswFileName, "rb");
                     if (!cswBlock) {
                         printf("Failed opening csw block!\n");

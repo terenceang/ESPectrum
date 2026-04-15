@@ -54,15 +54,28 @@ IRAM_ATTR void I2S::interruptStatic(void *arg)
 void I2S::reset()
 {
 	volatile i2s_dev_t &i2s = *i2sDevices[i2sIndex];
+	const uint32_t conf_reset_flags = I2S_RX_RESET_M | I2S_RX_FIFO_RESET_M | I2S_TX_RESET_M | I2S_TX_FIFO_RESET_M;
+
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	const unsigned long lc_conf_reset_flags = I2S_IN_RST_M | I2S_OUT_RST_M | I2S_AHBM_RST_M | I2S_AHBM_FIFO_RST_M;
 	i2s.lc_conf.val |= lc_conf_reset_flags;
 	i2s.lc_conf.val &= ~lc_conf_reset_flags;
+#endif
 
-	const uint32_t conf_reset_flags = I2S_RX_RESET_M | I2S_RX_FIFO_RESET_M | I2S_TX_RESET_M | I2S_TX_FIFO_RESET_M;
-	i2s.conf.val |= conf_reset_flags;
-	i2s.conf.val &= ~conf_reset_flags;
-	while (i2s.state.rx_fifo_reset_back)
-		;
+	#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
+		i2s.conf.val |= conf_reset_flags;
+		i2s.conf.val &= ~conf_reset_flags;
+
+		while (i2s.state.rx_fifo_reset_back)
+			;
+#else
+		const uint32_t rx_conf_reset_flags = I2S_RX_RESET_M | I2S_RX_FIFO_RESET_M;
+		const uint32_t tx_conf_reset_flags = I2S_TX_RESET_M | I2S_TX_FIFO_RESET_M;
+		i2s.rx_conf.val |= rx_conf_reset_flags;
+		i2s.rx_conf.val &= ~rx_conf_reset_flags;
+		i2s.tx_conf.val |= tx_conf_reset_flags;
+		i2s.tx_conf.val &= ~tx_conf_reset_flags;
+#endif
 }
 
 void I2S::i2sStop()
@@ -70,8 +83,13 @@ void I2S::i2sStop()
 	volatile i2s_dev_t &i2s = *i2sDevices[i2sIndex];
 	esp_intr_disable(interruptHandle);
 	reset();
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	i2s.conf.rx_start = 0;
 	i2s.conf.tx_start = 0;
+#else
+	i2s.rx_conf.rx_start = 0;
+	i2s.tx_conf.tx_start = 0;
+#endif
 }
 
 void I2S::startTX()
@@ -80,38 +98,61 @@ void I2S::startTX()
 	// DEBUG_PRINTLN("I2S TX");
 	esp_intr_disable(interruptHandle);
 	reset();
-    i2s.lc_conf.val    = I2S_OUT_DATA_BURST_EN | I2S_OUTDSCR_BURST_EN;
+
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
+	i2s.lc_conf.val    = I2S_OUT_DATA_BURST_EN | I2S_OUTDSCR_BURST_EN;
 	dmaBufferDescriptorActive = 0;
 	i2s.out_link.addr = (uint32_t)firstDescriptorAddress();
 	i2s.out_link.start = 1;
+#endif
 	i2s.int_clr.val = i2s.int_raw.val;
 	i2s.int_ena.val = 0;
 	if(useInterrupt())
 	{
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 		i2s.int_ena.out_eof = 1;
+#endif
 		//enable interrupt
 		esp_intr_enable(interruptHandle);
 	}
 	//start transmission
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	i2s.conf.tx_start = 1;
+#else
+	i2s.tx_conf.tx_start = 1;
+#endif
 }
 
 void I2S::resetDMA()
 {
 	volatile i2s_dev_t &i2s = *i2sDevices[i2sIndex];
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	i2s.lc_conf.in_rst = 1;
 	i2s.lc_conf.in_rst = 0;
 	i2s.lc_conf.out_rst = 1;
 	i2s.lc_conf.out_rst = 0;
+#else
+	i2s.rx_conf.rx_reset = 1;
+	i2s.rx_conf.rx_reset = 0;
+	i2s.tx_conf.tx_reset = 1;
+	i2s.tx_conf.tx_reset = 0;
+#endif
 }
 
 void I2S::resetFIFO()
 {
 	volatile i2s_dev_t &i2s = *i2sDevices[i2sIndex];
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	i2s.conf.rx_fifo_reset = 1;
 	i2s.conf.rx_fifo_reset = 0;
 	i2s.conf.tx_fifo_reset = 1;
 	i2s.conf.tx_fifo_reset = 0;
+#else
+	i2s.rx_conf.rx_fifo_reset = 1;
+	i2s.rx_conf.rx_fifo_reset = 0;
+	i2s.tx_conf.tx_fifo_reset = 1;
+	i2s.tx_conf.tx_fifo_reset = 0;
+#endif
 }
 
 DMABufferDescriptor *I2S::firstDescriptorAddress() const
@@ -129,6 +170,7 @@ bool I2S::initParallelOutputMode(const int *pinMap, int mode, const int bitCount
 	volatile i2s_dev_t &i2s = *i2sDevices[i2sIndex];
 	//route peripherals
 	//in parallel mode only upper 16 bits are interesting in this case
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	const int deviceBaseIndex[] = {I2S0O_DATA_OUT0_IDX, I2S1O_DATA_OUT0_IDX};
 	const int deviceClockIndex[] = {I2S0O_BCK_OUT_IDX, I2S1O_BCK_OUT_IDX};
 	const int deviceWordSelectIndex[] = {I2S0O_WS_OUT_IDX, I2S1O_WS_OUT_IDX};
@@ -159,19 +201,35 @@ bool I2S::initParallelOutputMode(const int *pinMap, int mode, const int bitCount
 	if (wordSelect > -1)
 		gpio_matrix_out(wordSelect, deviceWordSelectIndex[i2sIndex], false, false);
 
+	const periph_module_t deviceModule[] = {PERIPH_I2S0_MODULE, PERIPH_I2S1_MODULE};
+#else
+	const periph_module_t deviceModule[] = {PERIPH_I2S0_MODULE, PERIPH_I2S1_MODULE};
+	(void)pinMap;
+	(void)baseClock;
+	(void)wordSelect;
+#endif
+
 	//enable I2S peripheral
 	periph_module_enable(deviceModule[i2sIndex]);
 
 	//reset i2s
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	i2s.conf.tx_reset = 1;
 	i2s.conf.tx_reset = 0;
 	i2s.conf.rx_reset = 1;
 	i2s.conf.rx_reset = 0;
+#else
+	i2s.tx_conf.tx_reset = 1;
+	i2s.tx_conf.tx_reset = 0;
+	i2s.rx_conf.rx_reset = 1;
+	i2s.rx_conf.rx_reset = 0;
+#endif
 
 	resetFIFO();
 	resetDMA();
 
 	//parallel mode
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 	i2s.conf2.val = 0;
 	i2s.conf2.lcd_en = 1;
 	//from technical datasheet figure 64
@@ -230,6 +288,27 @@ bool I2S::initParallelOutputMode(const int *pinMap, int mode, const int bitCount
 	if(useInterrupt())
 		esp_intr_alloc(interruptSource[i2sIndex], ESP_INTR_FLAG_INTRDISABLED | ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM, &interruptStatic, this, &interruptHandle);
 	return true;
+#else
+	(void)pinMap;
+	(void)mode;
+	(void)bitCount;
+	(void)wordSelect;
+	(void)baseClock;
+
+	// ESP32-S3 uses a different I2S register model than legacy ESP32/ESP32-S2.
+	// The low-level parallel DMA path used by the original driver is not available here.
+	i2s.rx_conf.rx_reset = 1;
+	i2s.rx_conf.rx_reset = 0;
+	i2s.tx_conf.tx_reset = 1;
+	i2s.tx_conf.tx_reset = 0;
+	resetFIFO();
+	resetDMA();
+
+	const int interruptSource[] = {ETS_I2S0_INTR_SOURCE, ETS_I2S1_INTR_SOURCE};
+	if(useInterrupt())
+		esp_intr_alloc(interruptSource[i2sIndex], ESP_INTR_FLAG_INTRDISABLED | ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM, &interruptStatic, this, &interruptHandle);
+	return false;
+#endif
 }
 
 void I2S::stop()

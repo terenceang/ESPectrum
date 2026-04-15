@@ -23,7 +23,7 @@ class VGA6Bit : public VGA, public GraphicsR2G2B2S2Swapped
 		interruptStaticChild = &VGA6Bit::interrupt;
 	}
 
-	bool init(int mode, const int *redPins, const int *greenPins, const int *bluePins, const int hsyncPin, const int vsyncPin, const int clockPin = -1)	{
+	bool init(int mode, const int *redPins, const int *greenPins, const int *bluePins, const int hsyncPin, const int vsyncPin, const int clockPin = -1, bool useOutput = true) {
 		int pinMap[8];
 		for (int i = 0; i < 2; i++)
 		{
@@ -33,7 +33,7 @@ class VGA6Bit : public VGA, public GraphicsR2G2B2S2Swapped
 		}
 		pinMap[6] = hsyncPin;
 		pinMap[7] = vsyncPin;			
-		return VGA::init(mode, pinMap, 8, clockPin);
+		return VGA::init(mode, pinMap, 8, clockPin, useOutput);
 	}
 
 	virtual void initSyncBits()	{

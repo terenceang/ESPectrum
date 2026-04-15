@@ -138,7 +138,7 @@ bool FileUtils::mountSDCard(int PIN_MISO, int PIN_MOSI, int PIN_CLK, int PIN_CS)
         .max_transfer_sz = 2048 /*4000*/,
     };
 
-    ret = spi_bus_initialize(SPI2_HOST, &bus_cfg, SPI_DMA_CH1);
+    ret = spi_bus_initialize(SPI2_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {
         printf("SD Card init: Failed to initialize bus.\n");
         vTaskDelay(20 / portTICK_PERIOD_MS);

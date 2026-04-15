@@ -56,8 +56,8 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 
 #include "fabgl.h"
 
-#include "soc/rtc_wdt.h"
-#include "esp_int_wdt.h"
+#include "rtc_wdt.h"
+#include "esp_private/esp_int_wdt.h"
 #include "esp_task_wdt.h"
 
 #include "freertos/FreeRTOS.h"

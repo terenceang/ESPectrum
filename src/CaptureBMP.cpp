@@ -110,7 +110,7 @@ void CaptureToBmp() {
 
     if (Config::slog_on) printf("BMP number -> %.5d\n",bmpnumber);
 
-    sprintf((char *)filename,"ESP%.5d.bmp",bmpnumber);
+    snprintf((char *)filename, sizeof(filename), "ESP%.5d.bmp", bmpnumber);
 
     // Full filename. Save only to SD.
     std::string fullfn = (string) MOUNT_POINT_SD + DISK_SCR_DIR + "/" + filename;

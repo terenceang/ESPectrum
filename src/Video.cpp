@@ -184,7 +184,7 @@ void precalcborder32() {
 
 void VIDEO::vgataskinit(void *unused) {
 
-    uint8_t Mode;
+    uint8_t Mode = 0;
 
     if (Config::videomode == 1) {
 
@@ -256,13 +256,15 @@ void VIDEO::Init() {
 
     if (Config::videomode) {
 
-        // xTaskCreatePinnedToCore(&VIDEO::vgataskinit, "videoTask", 1024, NULL, configMAX_PRIORITIES - 2, &videoTaskHandle, 1);
-        xTaskCreatePinnedToCore(&VIDEO::vgataskinit, "videoTask", 1024, NULL, 5, &videoTaskHandle, 1);
+        // In LCD mode, skip VGA signal generation and allocate the frame buffers only.
+        int Mode = Config::aspect_16_9 ? 2 : 0;
+        Mode += Config::scanlines;
 
-        // Wait for vertical sync to ensure vga.init is done
-        for (;;) {
-            if (ESPectrum::vsync) break;
-        }
+        OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
+        OSD::scrH = (vidmodes[Mode][vmodeproperties::vRes] / vidmodes[Mode][vmodeproperties::vDiv]) >> Config::scanlines;
+
+        vga.VGA6Bit_useinterrupt = false;
+        vga.init(Mode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN, -1, false);
 
     } else {
 
@@ -276,7 +278,7 @@ void VIDEO::Init() {
         vga.VGA6Bit_useinterrupt=false;
 
         // ESPectrum::showMemInfo("Before VGA init");
-        vga.init( Mode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
+        vga.init( Mode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN, -1, false);
         // ESPectrum::showMemInfo("After VGA init");
 
     }
@@ -298,6 +300,9 @@ void VIDEO::Init() {
     vga.setFont(Font6x8);
     vga.setCodepage(LANGCODEPAGE[Config::lang]);
 
+#ifdef USE_LCD
+    LCDDisplay::Init();
+#endif
 }
 
 void VIDEO::Reset() {
@@ -1004,6 +1009,9 @@ IRAM_ATTR void VIDEO::EndFrame() {
 
     framecnt++;
 
+#ifdef USE_LCD
+    LCDDisplay::Flush();
+#endif
 }
 
 //----------------------------------------------------------------------------------------------------------------

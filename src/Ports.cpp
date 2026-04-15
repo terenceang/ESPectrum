@@ -438,15 +438,16 @@ IRAM_ATTR void Ports::output(uint16_t address, uint8_t data) {
         port254 = data;
 
         // Border color
-        if (VIDEO::borderColor != data & 0x07) {
+        if ((VIDEO::borderColor != (data & 0x07))) {
 
             VIDEO::brdChange = true;
 
-            if (!Z80Ops::isPentagon && !Z80Ops::is2a3)
+            if (!Z80Ops::isPentagon && !Z80Ops::is2a3) {
                 if (Config::arch[0] == 'T' && Config::ALUTK > 0)
                     VIDEO::Draw(tkIOcon(address),false);
                 else
                     VIDEO::Draw(0,true); // Seems not needed in Pentagon and +2A/+3
+            }
 
             VIDEO::DrawBorder();
 

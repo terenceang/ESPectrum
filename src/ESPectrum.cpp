@@ -60,7 +60,9 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include "soc/timer_group_struct.h"
 #include "esp_timer.h"
 #include "esp_system.h"
+#include "esp_chip_info.h"
 #include "esp_spi_flash.h"
+#include "esp_flash.h"
 #include "esp_efuse.h"
 #include "soc/efuse_reg.h"
 #include "nvs_flash.h"
@@ -697,9 +699,11 @@ void ESPectrum::setup() {
                 (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
                 (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
         printf("silicon revision %d, ", chip_info.revision);
-        printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
+        size_t flash_size = 0;
+        esp_flash_get_size(NULL, &flash_size);
+        printf("%dMB %s flash\n", int(flash_size / (1024 * 1024)),
                 (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-        printf("IDF Version: %s\n",esp_get_idf_version());
+        printf("IDF Version: %s\n", esp_get_idf_version());
         printf("\n");
 
         if (Config::slog_on) printf("Executing on core: %u\n", xPortGetCoreID());
@@ -822,7 +826,7 @@ void ESPectrum::setup() {
     // Create Audio task
     audioTaskQueue = xQueueCreate(1, sizeof(uint8_t *));
     // Latest parameter = Core. In ESPIDF, main task runs on core 0 by default. In Arduino, loop() runs on core 1.
-    xTaskCreatePinnedToCore(&ESPectrum::audioTask, "audioTask", 2048 /* 1024 /* 1536 */, NULL, configMAX_PRIORITIES - 1, &audioTaskHandle, 1);
+    xTaskCreatePinnedToCore(&ESPectrum::audioTask, "audioTask", 2048, NULL, configMAX_PRIORITIES - 1, &audioTaskHandle, 1);
 
     audioCOVOXDivider = audioAYDivider;
     covoxData[0] = covoxData[1] = covoxData[2] = covoxData[3] = 0;
@@ -2089,7 +2093,7 @@ for(;;) {
                 snprintf(OSD::stats_lin1, sizeof(OSD::stats_lin1), " %-12s %04d/%04d ", Tape::tapeFileName.substr(0 + ESPectrum::TapeNameScroller, 12).c_str(), Tape::tapeCurBlock + 1, Tape::tapeNumBlocks);
 
                 float percent = (float)((Tape::tapebufByteCount + Tape::tapePlayOffset) * 100) / (float)Tape::tapeFileSize;
-                snprintf(OSD::stats_lin2, sizeof(OSD::stats_lin2), " %05.2f%% %07d%s%07d ", percent, Tape::tapebufByteCount + Tape::tapePlayOffset, "/" , Tape::tapeFileSize);
+                snprintf(OSD::stats_lin2, sizeof(OSD::stats_lin2), " %05.2f%% %07u/%07u ", percent, Tape::tapebufByteCount + Tape::tapePlayOffset, Tape::tapeFileSize);
 
                 if ((++ESPectrum::TapeNameScroller + 12) > Tape::tapeFileName.length()) ESPectrum::TapeNameScroller = 0;
 

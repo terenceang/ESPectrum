@@ -40,6 +40,8 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include "fabgl.h"
 
 // Language files
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #include "messages_en.h"
 #include "messages_es.h"
 #include "messages_pt.h"
@@ -20060,5 +20062,7 @@ const uint8_t Layout_TK[] = {
     0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
     0xC0, 0xC0, 0xC0, 0xC0
 	};
+
+#pragma GCC diagnostic pop
 
 #endif // ESPECTRUM_MESSAGES_h

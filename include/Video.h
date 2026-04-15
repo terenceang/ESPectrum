@@ -36,8 +36,14 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #define VIDEO_h
 
 #include <inttypes.h>
+
+#define USE_LCD 1
+
 #include "ESPectrum.h"
 #include "ESP32Lib/VGA/VGA6Bit.h"
+#ifdef USE_LCD
+#include "LCDDisplay.h"
+#endif
 
 #define SPEC_W 256
 #define SPEC_H 192

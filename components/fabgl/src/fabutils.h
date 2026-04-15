@@ -43,8 +43,11 @@
 
 #include <driver/adc.h>
 #include <esp_system.h>
+#include <esp_timer.h>
 #include "sdmmc_cmd.h"
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 #include "soc/frc_timer_reg.h"
+#endif
 #include "rom/lldesc.h"
 
 #ifdef ARDUINO
@@ -1133,6 +1136,7 @@ inline uint32_t FRC1Timer()
 
 #else
 
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
 // prescaler: FRC_TIMER_PRESCALER_1, FRC_TIMER_PRESCALER_16, FRC_TIMER_PRESCALER_256
 // 80Mhz / prescaler = timer frequency
 inline void FRC1Timer_init(int prescaler)
@@ -1141,11 +1145,21 @@ inline void FRC1Timer_init(int prescaler)
   REG_WRITE(FRC_TIMER_CTRL_REG(0), prescaler | FRC_TIMER_ENABLE);
 }
 
-
 inline uint32_t FRC1Timer()
 {
   return FRC1TimerMax - REG_READ(FRC_TIMER_COUNT_REG(0)); // make timer count up
 }
+#else
+inline void FRC1Timer_init(int prescaler)
+{
+  (void)prescaler;
+}
+
+inline uint32_t FRC1Timer()
+{
+  return (uint32_t)((esp_timer_get_time() * 80ULL) & FRC1TimerMax);
+}
+#endif
 
 #endif
 

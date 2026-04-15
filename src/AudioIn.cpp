@@ -45,15 +45,14 @@ volatile int AudioIn::Bufsize = 0;
 volatile int AudioIn::sample_index = 0;
 double AudioIn::Factor = 0;
 uint64_t AudioIn::Basepos = 0;
-volatile uint32_t* AudioIn::gpio_in;
-volatile uint32_t AudioIn::gpio_mask;
+static gpio_num_t gpio_pin = GPIO_NUM_NC;
 
 extern "C" void IRAM_ATTR AudioInGetAudio();
 
 void IRAM_ATTR AudioInGetAudio() {
     if (AudioIn::Status == AUDIOIN_PLAY) {
-        AudioIn::Buffer[AudioIn::sample_index++] = (*AudioIn::gpio_in & AudioIn::gpio_mask) != 0;
-        // AudioIn::Buffer[AudioIn::sample_index++] = (*AudioIn::gpio_in & AudioIn::gpio_mask) == 0; // Inverted polarity
+        AudioIn::Buffer[AudioIn::sample_index++] = gpio_get_level(gpio_pin) != 0;
+        // AudioIn::Buffer[AudioIn::sample_index++] = gpio_get_level(gpio_pin) == 0; // Inverted polarity
         if (AudioIn::sample_index >= AudioIn::Bufsize) AudioIn::sample_index = 0;
     }
 }
@@ -61,17 +60,8 @@ void IRAM_ATTR AudioInGetAudio() {
 void AudioIn::GPIOSetup() {
 
     if (Config::AudioInGPIO != 0) {
-
-        if (Config::AudioInGPIO < 32) {
-            gpio_in = &GPIO.in;
-            gpio_mask = 1 << Config::AudioInGPIO;
-        } else {
-            gpio_in = &GPIO.in1.val;
-            gpio_mask = 1 << (Config::AudioInGPIO - 32);
-        }
-
-        gpio_set_direction((gpio_num_t)Config::AudioInGPIO, (gpio_mode_t)GPIO_MODE_INPUT);
-
+        gpio_pin = (gpio_num_t)Config::AudioInGPIO;
+        gpio_set_direction(gpio_pin, (gpio_mode_t)GPIO_MODE_INPUT);
     }
 
 }

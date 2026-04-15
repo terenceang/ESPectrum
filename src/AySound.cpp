@@ -215,7 +215,7 @@ void AySound::init()
 }
 
 /** Set chip type. */
-int AySound::set_chip_type(ayemu_chip_t type, int *custom_table)
+int AySound::set_chip_type(ayemu_chip_t /*type*/, int *custom_table)
 {
 
     const float max_volume = float (AYEMU_MAX_AMP / 3.0f);	// As there are three channels.

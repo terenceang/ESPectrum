@@ -88,7 +88,7 @@ class VGA : public I2S {
 
 	VGA(const int i2sIndex = 0);
 
-	bool init(int mode, const int *pinMap, const int bitCount, const int clockPin = -1);
+	bool init(int mode, const int *pinMap, const int bitCount, const int clockPin = -1, bool useOutput = true);
 
 	int mode;
 

@@ -482,7 +482,11 @@ reset:
                     foundcount++;
                     // printf("%s",buf);
                 }else {
-                    char *p = buf; while(*p) *p++ = toupper(*p);
+                    char *p = buf;
+                    while (*p) {
+                        *p = toupper(*p);
+                        p++;
+                    }
                     char *pch = strstr(buf, search.c_str());
                     if (pch != NULL) {
                         foundcount++;
@@ -858,7 +862,7 @@ reset:
 
                                 if ( newname == "" || fname == (newname + filext))  break;
 
-                                if (rename((FileUtils::MountPoint + fdir + fname).c_str(),(FileUtils::MountPoint + fdir + newname + filext).c_str()) == ERR_OK) {
+if (rename((FileUtils::MountPoint + fdir + fname).c_str(),(FileUtils::MountPoint + fdir + newname + filext).c_str()) == 0) {
 
                                     fclose(dirfile);
                                     dirfile = NULL;
@@ -903,7 +907,7 @@ reset:
 
                                     if ( newname == "" || fname == newname)  break;
 
-                                    if (rename((FileUtils::MountPoint + fdir + fname).c_str(),(FileUtils::MountPoint + fdir + newname).c_str()) == ERR_OK) {
+                                    if (rename((FileUtils::MountPoint + fdir + fname).c_str(),(FileUtils::MountPoint + fdir + newname).c_str()) == 0) {
 
                                         fclose(dirfile);
                                         dirfile = NULL;
@@ -1396,7 +1400,11 @@ reset:
                                 foundcount++;
                                 // printf("%s",buf);
                         }else {
-                            char *p = buf; while(*p) *p++ = toupper(*p);
+                            char *p = buf;
+                            while (*p) {
+                                *p = toupper(*p);
+                                p++;
+                            }
                             char *pch = strstr(buf, search.c_str());
                             if (pch != NULL) {
                                 foundcount++;

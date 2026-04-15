@@ -6,7 +6,7 @@ idf_component_register(SRC_DIRS src
                                 src/devdrivers
                        REQUIRES fatfs
                                 spiffs
-                                esp_adc_cal
+                                esp_adc
                                 ulp
                                 nvs_flash
                                 soc)
