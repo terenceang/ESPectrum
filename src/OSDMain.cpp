@@ -288,8 +288,8 @@ void OSD::drawKbdLayout(uint8_t layout) {
 
         } else {
 
-            pos_x = Config::aspect_16_9 ? 52 : 32;
-            pos_y = Config::aspect_16_9 ? 7 : 27;
+            pos_x = 32;
+            pos_y = 27;
 
         }
 
@@ -1120,19 +1120,13 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool CTRL, bool SHIFT) {
 
             if ((VIDEO::OSD & 0x03) > 2) {
                 if ((VIDEO::OSD & 0x04) == 0) {
-                    if (Config::aspect_16_9)
-                        VIDEO::Draw_OSD169 = Z80Ops::is2a3 ? VIDEO::MainScreen_2A3 : VIDEO::MainScreen;
-                    else
-                        VIDEO::Draw_OSD43 = Z80Ops::isPentagon ? VIDEO::BottomBorder_Pentagon :  VIDEO::BottomBorder;
+                    VIDEO::Draw_OSD43 = Z80Ops::isPentagon ? VIDEO::BottomBorder_Pentagon : VIDEO::BottomBorder;
                 }
                 VIDEO::OSD &= 0xfc;
             } else {
 
                 if ((VIDEO::OSD & 0x04) == 0) {
-                    if (Config::aspect_16_9)
-                        VIDEO::Draw_OSD169 = Z80Ops::is2a3 ? VIDEO::MainScreen_OSD_2A3 : VIDEO::MainScreen_OSD;
-                    else
-                        VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
+                    VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
 
                     OSD::drawStats();
                 }
@@ -1157,14 +1151,8 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool CTRL, bool SHIFT) {
         else if (KeytoESP == fabgl::VK_F9 || KeytoESP == fabgl::VK_VOLUMEDOWN) {
 
             if (VIDEO::OSD == 0) {
-
-                if (Config::aspect_16_9)
-                    VIDEO::Draw_OSD169 = Z80Ops::is2a3 ? VIDEO::MainScreen_OSD_2A3 : VIDEO::MainScreen_OSD;
-                else
-                    VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
-
+                VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
                 VIDEO::OSD = 0x04;
-
             } else VIDEO::OSD |= 0x04;
 
             ESPectrum::totalseconds = 0;
@@ -1177,14 +1165,8 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool CTRL, bool SHIFT) {
             }
 
             unsigned short x,y;
-
-            if (Config::aspect_16_9) {
-                x = 156;
-                y = 180;
-            } else {
-                x = 168;
-                y = VIDEO::brdlin_osdstart + 4;
-            }
+            x = 168;
+            y = VIDEO::brdlin_osdstart + 4;
 
             VIDEO::vga.fillRect(x ,y - 4, 24 * 6, 16, zxColor(1, 0));
             VIDEO::vga.setTextColor(zxColor(7, 0), zxColor(1, 0));
@@ -1198,14 +1180,8 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool CTRL, bool SHIFT) {
         else if (KeytoESP == fabgl::VK_F10 || KeytoESP == fabgl::VK_VOLUMEUP) {
 
             if (VIDEO::OSD == 0) {
-
-                if (Config::aspect_16_9)
-                    VIDEO::Draw_OSD169 = Z80Ops::is2a3 ? VIDEO::MainScreen_OSD_2A3 : VIDEO::MainScreen_OSD;
-                else
-                    VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
-
+                VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
                 VIDEO::OSD = 0x04;
-
             } else VIDEO::OSD |= 0x04;
 
             ESPectrum::totalseconds = 0;
@@ -1218,13 +1194,8 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool CTRL, bool SHIFT) {
             }
 
             unsigned short x,y;
-            if (Config::aspect_16_9) {
-                x = 156;
-                y = 180;
-            } else {
-                x = 168;
-                y = VIDEO::brdlin_osdstart + 4;
-            }
+            x = 168;
+            y = VIDEO::brdlin_osdstart + 4;
 
             VIDEO::vga.fillRect(x ,y - 4, 24 * 6, 16, zxColor(1, 0));
             VIDEO::vga.setTextColor(zxColor(7, 0), zxColor(1, 0));
@@ -2211,49 +2182,14 @@ void OSD::do_OSD(fabgl::VirtualKey KeytoESP, bool CTRL, bool SHIFT) {
                                     }
                                 }
                                 else if (options_num == 2) {
+                                    // Placeholder for Video -> option 2 (no-op)
                                     menu_level = 3;
                                     menu_curopt = 1;
                                     menu_saverect = true;
-                                    while (1) {
-
-                                        // aspect ratio
-                                        string asp_menu = MENU_ASPECT[Config::lang];
-                                        bool prev_asp = Config::aspect_16_9;
-                                        if (prev_asp) {
-                                            menu_curopt = 2;
-                                            asp_menu.replace(asp_menu.find("[4",0),2,"[ ");
-                                            asp_menu.replace(asp_menu.find("[1",0),2,"[*");
-                                        } else {
-                                            menu_curopt = 1;
-                                            asp_menu.replace(asp_menu.find("[4",0),2,"[*");
-                                            asp_menu.replace(asp_menu.find("[1",0),2,"[ ");
-                                        }
-                                        uint8_t opt2 = menuRun(asp_menu);
-                                        if (opt2) {
-
-                                            if (Config::videomode == 2) opt2 = 1; // Force 4:3 aspect ratio in CRT mode
-
-                                            if (opt2 == 1)
-                                                Config::aspect_16_9 = false;
-                                            else
-                                                Config::aspect_16_9 = true;
-
-                                            if (Config::aspect_16_9 != prev_asp) {
-                                                Config::ram_file = "none";
-                                                Config::save("asp169");
-                                                Config::save("ram");
-                                                esp_hard_reset();
-                                            }
-
-                                            menu_curopt = opt2;
-                                            menu_saverect = false;
-
-                                        } else {
-                                            menu_curopt = 2;
-                                            menu_level = 2;
-                                            break;
-                                        }
-                                    }
+                                    // No further submenu implemented here; return to video menu
+                                    menu_curopt = 2;
+                                    menu_level = 2;
+                                    break;
                                 }
                                 else if (options_num == 3) {
                                     menu_level = 3;
@@ -3234,9 +3170,9 @@ void OSD::AboutDlg() {
             pos_y = 57;
         }
     } else {
-        VIDEO::vga.fillRect(Config::aspect_16_9 ? 60 : 40,Config::aspect_16_9 ? 12 : 32,240,44,zxColor(0, 0));
-        pos_x = Config::aspect_16_9 ? 86 : 66;
-        pos_y = Config::aspect_16_9 ? 21 : 41;
+        VIDEO::vga.fillRect(40, 32, 240, 44, zxColor(0, 0));
+        pos_x = 66;
+        pos_y = 41;
     }
 
     int logo_w = (logo[5] << 8) + logo[4]; // Get Width
@@ -3252,8 +3188,8 @@ void OSD::AboutDlg() {
         pos_x = 62;
         pos_y = Config::arch[0] == 'T' && Config::ALUTK == 2 ? 72 : 96;
     } else {
-        pos_x = Config::aspect_16_9 ? 63 : 43;
-        pos_y = Config::aspect_16_9 ? 57 : 77;
+        pos_x = 43;
+        pos_y = 77;
     }
 
     #define ABOUTLINES 16

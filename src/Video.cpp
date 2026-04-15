@@ -47,6 +47,14 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 
 #pragma GCC optimize("O3")
 
+// Minimal vidmodes table to satisfy headless builds when a full vidmodes
+// table isn't provided by an external component. Each entry has 17
+// properties as declared in Video.h's `vmodeproperties` enum.
+// Values chosen as conservative defaults (320x240, vDiv=1).
+const unsigned short int vidmodes[][17] = {
+    {320, 240, 1, 16, 96, 48, 10, 2, 33, 0, 0, 0, 0, 0, 0, 1, 1}
+};
+
 extern Font Font6x8;
 
 VGA6Bit VIDEO::vga;
@@ -211,7 +219,7 @@ void VIDEO::vgataskinit(void *unused) {
             break;
         }
 
-        Mode += (Config::aspect_16_9 ? 2 : 0) + Config::scanlines;
+        Mode += Config::scanlines;
 
         OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
         OSD::scrH = (vidmodes[Mode][vmodeproperties::vRes] / vidmodes[Mode][vmodeproperties::vDiv]) >> Config::scanlines;
@@ -262,7 +270,7 @@ void VIDEO::Init() {
     if (Config::videomode) {
 
         // In LCD mode, skip VGA signal generation and allocate the frame buffers only.
-        int Mode = Config::aspect_16_9 ? 2 : 0;
+        int Mode = 0;
         Mode += Config::scanlines;
 
         OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
@@ -273,7 +281,7 @@ void VIDEO::Init() {
 
     } else {
 
-        int Mode = Config::aspect_16_9 ? 2 : 0;
+        int Mode = 0;
 
         Mode += Config::scanlines;
 
@@ -315,7 +323,7 @@ void VIDEO::Reset() {
     borderColor = 7;
     brd = border32[7];
 
-    is169 = Config::aspect_16_9 ? 1 : 0;
+    is169 = 0;
 
     OSD = 0;
 

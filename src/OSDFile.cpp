@@ -202,7 +202,7 @@ string OSD::fileDialog(string &fdir, string title, uint8_t ftype, uint8_t mfcols
 
     // Columns and Rows
     cols = mfcols;
-    mf_rows = mfrows + (Config::aspect_16_9 ? 0 : 1);
+    mf_rows = mfrows + 1;
 
     // CRT Overscan compensation
     if (Config::videomode == 2) {
@@ -221,11 +221,11 @@ string OSD::fileDialog(string &fdir, string title, uint8_t ftype, uint8_t mfcols
 
     // Position
     if (menu_level == 0) {
-        x += (Config::aspect_16_9 ? 24 : 8);
-        y += (Config::aspect_16_9 ? 4 : 8);
+        x += 8;
+        y += 8;
     } else {
-        x += (Config::aspect_16_9 ? 24 : 4) + (48 * menu_level);
-        y += (Config::aspect_16_9 ? 8 : 8) + (4 * (menu_level - 1));
+        x += 4 + (48 * menu_level);
+        y += 8 + (4 * (menu_level - 1));
     }
 
     // Size
@@ -1437,7 +1437,7 @@ if (rename((FileUtils::MountPoint + fdir + fname).c_str(),(FileUtils::MountPoint
 
                 if (cols > (Config::lang ? 32 : 28) + 14) {
 
-                    menuAt(mfrows + (Config::aspect_16_9 ? 0 : 1), 1);
+                    menuAt(mfrows + 1, 1);
                     VIDEO::vga.setTextColor(zxColor(7, 1), zxColor(5, 0));
                     if ( ftype == DISK_TAPFILE ) { // Dirty hack
                         VIDEO::vga.print(Config::lang ? "F2 Nuevo | " : "F2 New | " );

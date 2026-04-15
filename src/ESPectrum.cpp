@@ -205,9 +205,9 @@ void ShowStartMsg() {
             pos_y = 59;
         }
     } else {
-        VIDEO::vga.fillRect(Config::aspect_16_9 ? 60 : 40,Config::aspect_16_9 ? 12 : 32,240,50,zxColor(0, 0));
-        pos_x = Config::aspect_16_9 ? 86 : 66;
-        pos_y = Config::aspect_16_9 ? 23 : 43;
+        VIDEO::vga.fillRect(40, 32, 240, 50, zxColor(0, 0));
+        pos_x = 66;
+        pos_y = 43;
     }
 
     // Decode Logo in EBF8 format
@@ -468,16 +468,12 @@ void ESPectrum::bootKeyboard(int timeout) {
 
         } else {
 
-            bool asp169 = false;
             uint8_t vidmode = (s[0] == '1') ? 0 : (s[0] == '2') ? 1 : 2;
-            if (vidmode != 2) asp169 = (s[1] == 'Q') ? false : true;
 
-            if (Config::videomode != vidmode || Config::aspect_16_9 != asp169) {
+            if (Config::videomode != vidmode) {
                 Config::videomode = vidmode;
-                Config::aspect_16_9 = asp169;
-                Config::ram_file="none";
+                Config::ram_file = "none";
                 Config::save("videomode");
-                Config::save("asp169");
                 Config::save("ram");
                 OSD::esp_hard_reset();
             }
@@ -2077,14 +2073,8 @@ for(;;) {
                 VIDEO::OSD &= 0xfb;
 
                 if (VIDEO::OSD == 0) {
-
-                    if (Config::aspect_16_9)
-                        VIDEO::Draw_OSD169 = Z80Ops::is2a3 ? VIDEO::MainScreen_2A3 : VIDEO::MainScreen;
-                    else
-                        VIDEO::Draw_OSD43 = Z80Ops::isPentagon ? VIDEO::BottomBorder_Pentagon :  VIDEO::BottomBorder;
-
+                    VIDEO::Draw_OSD43 = Z80Ops::isPentagon ? VIDEO::BottomBorder_Pentagon : VIDEO::BottomBorder;
                     VIDEO::brdnextframe = true;
-
                 }
 
             }

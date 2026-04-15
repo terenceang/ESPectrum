@@ -103,7 +103,6 @@ public:
     static string   last_ram_file;
     static uint8_t  esp32rev;
     static bool     slog_on;
-    static bool     aspect_16_9;
     static uint8_t  lang;
     static bool     AY48;
     static bool     Issue2;

@@ -81,7 +81,6 @@ string   Config::pref_romSet_95 = "95es";
 string   Config::ram_file = NO_RAM_FILE;
 string   Config::last_ram_file = NO_RAM_FILE;
 bool     Config::slog_on = true;
-bool     Config::aspect_16_9 = false;
 uint8_t  Config::videomode = 0; // 0 -> SAFE VGA, 1 -> 50HZ VGA, 2 -> 50HZ CRT
 uint8_t  Config::esp32rev = 0;
 uint8_t  Config::lang = 0;
@@ -197,7 +196,6 @@ const ConfigEntry configEntries[] = {
     {"pref_romSet_95", CONFIG_TYPE_STRING, &Config::pref_romSet_95},
     {"ram", CONFIG_TYPE_STRING, &Config::ram_file},
     {"slog", CONFIG_TYPE_BOOL, &Config::slog_on},
-    {"asp169", CONFIG_TYPE_BOOL, &Config::aspect_16_9},
     {"videomode", CONFIG_TYPE_UINT8, &Config::videomode},
     {"language", CONFIG_TYPE_UINT8, &Config::lang},
     {"AY48", CONFIG_TYPE_BOOL, &Config::AY48},

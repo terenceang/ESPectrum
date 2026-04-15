@@ -19,7 +19,7 @@ This project is based on David Crespo excellent work on [ZX-ESPectrum-Wiimote](h
 - ZX81+ IF2 ROM by courtesy Paul Farrow with .P file loading from SD card.
 - 6 bpp VGA output in three modes: Standard VGA (60 and 70hz), VGA with every machine real vertical frequency and CRT 15khz with real vert. freq. also.
 - VGA fake scanlines effect.
-- Support for two aspect ratios: 16:9 or 4:3 monitors (using 360x200 or 320x240 modes)
+- Support for 4:3 monitors (using 320x240 mode)
 - Complete overscan supported in CRT 15Khz mode (at 352x272 resolution for 50hz machines and 352x224 for 60hz ones).
 - Multicolor attribute effects emulated (Bifrost*2, Nirvana and Nirvana+ engines).
 - Border effects emulated (Aquaplane, The Sentinel, Overscan demo).

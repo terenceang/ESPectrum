@@ -57,8 +57,8 @@ static void ili9341_init() {
     lcd_cmd(0xC5, p_c5, sizeof(p_c5));           // VCom Control 1
     const uint8_t p_c7[] = {0x86};
     lcd_cmd(0xC7, p_c7, sizeof(p_c7));           // VCom Control 2
-    const uint8_t p_36[] = {0x28};
-    lcd_cmd(0x36, p_36, sizeof(p_36));           // MADCTL: landscape (MV+BGR, no MX)
+    const uint8_t p_36[] = {0xA8};
+    lcd_cmd(0x36, p_36, sizeof(p_36));           // MADCTL: landscape (MV+BGR, MY=1)
     const uint8_t p_3a[] = {0x55};
     lcd_cmd(0x3A, p_3a, sizeof(p_3a));           // 16-bit colour
     const uint8_t p_b1[] = {0x00,0x18};
@@ -189,5 +189,11 @@ void LCDDisplay::Flush() {
                                    ACTIVE_W * thisStripH * sizeof(uint16_t));
     }
 }
+
+#else
+
+// No-op stubs for headless (non-LCD) builds.
+void LCDDisplay::Init()  {}
+void LCDDisplay::Flush() {}
 
 #endif

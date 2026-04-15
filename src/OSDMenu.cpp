@@ -164,11 +164,11 @@ unsigned short OSD::menuRun(string new_menu) {
 
     // Position
     if (menu_level == 0) {
-        x += (Config::aspect_16_9 ? 24 : 8);
+        x += 8;
         y += 8;
         prev_y[0] = 0;
     } else {
-        x += (Config::aspect_16_9 ? 24 : 8) + (54 /*60*/ * menu_level);
+        x += 8 + (54 /*60*/ * menu_level);
         if (menu_saverect && !prev_y[menu_level]) {
             y += (4 + (8 * menu_prevopt));
             prev_y[menu_level] = y;
@@ -708,7 +708,7 @@ int OSD::menuTape(string title) {
         y = 0;
     }
 
-    x += (Config::aspect_16_9 ? 24 : 8);
+    x += 8;
     y += 8;
 
 //    } else {

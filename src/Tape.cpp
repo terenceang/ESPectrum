@@ -273,17 +273,11 @@ void Tape::LoadTape(string mFile) {
                 }
                 Config::last_ram_file = NO_RAM_FILE;
 
-                if (OSDprev) {
-
+                    if (OSDprev) {
                     VIDEO::OSD = OSDprev;
-                    if (Config::aspect_16_9)
-                        VIDEO::Draw_OSD169 = Z80Ops::is2a3 ? VIDEO::MainScreen_OSD_2A3 : VIDEO::MainScreen_OSD;
-                    else
-                        VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
-
+                    VIDEO::Draw_OSD43  = Z80Ops::isPentagon ? VIDEO::BottomBorder_OSD_Pentagon : VIDEO::BottomBorder_OSD;
                     ESPectrum::TapeNameScroller = 0;
-
-                }
+                    }
 
             } else {
 
