@@ -1,6 +1,6 @@
-![ESPectrum](https://zxespectrum.speccy.org/wp-content/uploads/2023/05/ESPectrum-logo-v02-2.png)
+![K10 Spectrum](https://zxespectrum.speccy.org/wp-content/uploads/2023/05/ESPectrum-logo-v02-2.png)
 
-This is an emulator of the Sinclair ZX Spectrum computer running on Espressif ESP32 SoC powered boards.
+This is K10 Spectrum, an emulator of the Sinclair ZX Spectrum computer running on Espressif ESP32 SoC powered boards.
 
 Currently, it can be used with many different boards being Lilygo's TTGo VGA32 board one of the best starting choices for his wonderful cost-features ratio. There are also some more boards out there that can run ESPectrum out-of-the-box like the ESP32-SBC-FabGL board from Olimex.
 

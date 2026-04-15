@@ -66,7 +66,7 @@ static const char *ERR_FS_EXT_FAIL[NLANGS] = { ERR_FS_EXT_FAIL_EN, ERR_FS_EXT_FA
 #define ERR_DIR_OPEN "Cannot open directory!"
 
 // OSD
-#define OSD_TITLE  " ESPectrum - The ESP32 powered emulator "
+#define OSD_TITLE  " K10 Spectrum - The ESP32 powered emulator "
 // #define OSD_BOTTOM " SCIENCE LEADS TO PROGRESS              "
 #define OSD_BOTTOM " zxespectrum.speccy.org     " EMU_VERSION
 
