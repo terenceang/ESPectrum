@@ -1,0 +1,65 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "PlatformIO Build (unihiker_k10_spectrum)",
+			"type": "shell",
+			"command": "C:\\Users\\TerenceAng\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"unihiker_k10_spectrum"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
+		},
+		{
+			"label": "PlatformIO Build (unihiker_k10_spectrum)",
+			"type": "shell",
+			"command": "C:\\Users\\TerenceAng\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"unihiker_k10_spectrum"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
+		},
+		{
+			"label": "PlatformIO Build (unihiker_k10_spectrum)",
+			"type": "shell",
+			"command": "C:\\Users\\TerenceAng\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"unihiker_k10_spectrum"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
+		},
+		{
+			"label": "PlatformIO Build (unihiker_k10_spectrum)",
+			"type": "shell",
+			"command": "C:\\Users\\TerenceAng\\.platformio\\penv\\Scripts\\platformio.exe",
+			"args": [
+				"run",
+				"--environment",
+				"unihiker_k10_spectrum"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$platformio"
+			],
+			"group": "build"
+		}
+	]
+}

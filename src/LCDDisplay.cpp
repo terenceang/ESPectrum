@@ -18,7 +18,7 @@ static const int OFFSET_X     = 0;
 static const int OFFSET_Y     = 0;
 static const int ACTIVE_W     = LCD_WIDTH;
 static const int ACTIVE_H     = LCD_HEIGHT;
-static const int STRIP_WIDTH  = 48;
+static const int STRIP_WIDTH  = 32;
 
 static const int PIN_MOSI = 21;
 static const int PIN_SCLK = 12;
