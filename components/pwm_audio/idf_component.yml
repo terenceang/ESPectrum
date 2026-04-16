@@ -1,6 +1,8 @@
 dependencies:
   espressif/cmake_utilities:
     version: 0.*
+  joltwallet/littlefs:
+    version: "~=1.16.0"
   idf:
     version: '>=4.3'
 description: PWM audio output driver for ESP32 series Socs

@@ -34,6 +34,7 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 
 #include <stdio.h>
 #include <string>
+#include <sys/stat.h>
 
 #include "ESPectrum.h"
 #include "Snapshot.h"
@@ -734,6 +735,8 @@ void ESPectrum::setup() {
     VIDEO::Init();
     VIDEO::Reset();
 
+    FileUtils::initFileSystem();
+
     if (Config::slog_on) showMemInfo("VGA started");
 
     if (Config::StartMsg) ShowStartMsg(); // Show welcome message
@@ -891,8 +894,6 @@ void ESPectrum::setup() {
     // Load snapshot if present in Config::ram_file
     if (Config::ram_file != NO_RAM_FILE) {
 
-        FileUtils::initFileSystem();
-
         // printf("------------------------------------\n");
         // printf("LOAD SNAPSHOT BECAUSE ARCH CHANGED OR RAM FILE SET\n");
         // printf("RAM file: %s\n", Config::ram_file.c_str());
@@ -976,6 +977,19 @@ void ESPectrum::setup() {
 
     double boottime = esp_timer_get_time() - ts_start;
     printf("Boot time: %6.2f\n", boottime / 1000000);
+
+    // Auto load autoexec.z80 from LittleFS if no snapshot was loaded
+    if (Config::last_ram_file == NO_RAM_FILE) {
+        string autoexecPath = (string)MOUNT_POINT_INTERNAL + "/autoexec.z80";
+        struct stat st;
+        if (stat(autoexecPath.c_str(), &st) != 0) {
+            autoexecPath = (string)MOUNT_POINT_INTERNAL + "/autoexec.Z80";
+        }
+        if (stat(autoexecPath.c_str(), &st) == 0) {
+            printf("Auto-loading %s\n", autoexecPath.c_str());
+            LoadSnapshot(autoexecPath, "", "", 0xff);
+        }
+    }
 
     // Load mouse test
     // LoadSnapshot("/sd/Tests/mouse.z80","","",0xff);

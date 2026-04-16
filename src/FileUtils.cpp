@@ -57,11 +57,13 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #include <sys/stat.h>
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
+#include "esp_littlefs.h"
 
 using namespace std;
 
 string FileUtils::MountPoint = MOUNT_POINT_SD; // Start with SD
 bool FileUtils::SDReady = false;
+static bool InternalFSReady = false;
 sdmmc_card_t *FileUtils::card;
 
 string FileUtils::SNA_Path = "/"; // Current path on the SD
@@ -106,6 +108,8 @@ size_t FileUtils::fileSize(const char * mFile) {
 
 void FileUtils::initFileSystem() {
 
+    mountInternalFS();
+
     // // Try to mount SD card on LILYGO TTGO VGA32 Board or ESPectrum Board
     // if (!SDReady) SDReady = mountSDCard(PIN_NUM_MISO_LILYGO_ESPECTRUM,PIN_NUM_MOSI_LILYGO_ESPECTRUM,PIN_NUM_CLK_LILYGO_ESPECTRUM,PIN_NUM_CS_LILYGO_ESPECTRUM);
 
@@ -114,6 +118,25 @@ void FileUtils::initFileSystem() {
 
     if (!SDReady) SDReady = mountSDCard(Config::Board == BOARD_OLIMEX ? PIN_NUM_MISO_SBCFABGL : PIN_NUM_MISO_LILYGO_ESPECTRUM, PIN_NUM_MOSI_LILYGO_ESPECTRUM, PIN_NUM_CLK_LILYGO_ESPECTRUM, PIN_NUM_CS_LILYGO_ESPECTRUM);
 
+}
+
+bool FileUtils::mountInternalFS() {
+    if (InternalFSReady) return true;
+
+    esp_vfs_littlefs_conf_t conf = {
+        .base_path = MOUNT_POINT_INTERNAL,
+        .partition_label = "data",
+        .format_if_mount_failed = false,
+        .dont_mount = false
+    };
+
+    esp_err_t ret = esp_vfs_littlefs_register(&conf);
+    if (ret != ESP_OK) {
+        printf("Failed to initialize LittleFS (%s)\n", esp_err_to_name(ret));
+        return false;
+    }
+    InternalFSReady = true;
+    return true;
 }
 
 bool FileUtils::mountSDCard(int PIN_MISO, int PIN_MOSI, int PIN_CLK, int PIN_CS) {

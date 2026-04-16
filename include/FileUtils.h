@@ -74,6 +74,8 @@ public:
     static bool mountSDCard(int PIN_MISO, int PIN_MOSI, int PIN_CLK, int PIN_CS);
     static void unmountSDCard();
 
+    static bool mountInternalFS();
+
     static bool isMountedSDCard();
     static bool isSDReady();
 
@@ -120,6 +122,7 @@ private:
 };
 
 #define MOUNT_POINT_SD "/sd"
+#define MOUNT_POINT_INTERNAL "/littlefs"
 #define DISK_SCR_DIR "/.c"
 // #define DISK_PSNA_DIR "/.p"
 // #define DISK_PSNA_FILE " #"
