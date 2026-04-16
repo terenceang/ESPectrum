@@ -34,6 +34,7 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 
 #include <stdio.h>
 #include <string>
+#include <sys/stat.h>
 
 #include "ESPectrum.h"
 #include "Snapshot.h"
@@ -179,94 +180,11 @@ int ESPectrum::ESPoffset = 0;
 // LOGGING / TESTING
 //=======================================================================================
 
-int ESPectrum::ESPtestvar = 0;
-int ESPectrum::ESPtestvar1 = 0;
-int ESPectrum::ESPtestvar2 = 0;
+
 
 #define START_MSG_DURATION 20
 
-void ShowStartMsg() {
 
-    fabgl::VirtualKeyItem Nextkey;
-
-    VIDEO::vga.clear(zxColor(7,0));
-
-    OSD::drawOSD(false);
-
-    int pos_x, pos_y;
-
-    if (Config::videomode == 2) {
-        pos_x = 82;
-        if (Config::arch[0] == 'T' && Config::ALUTK == 2) {
-            VIDEO::vga.fillRect( 56, 24, 240,50,zxColor(0, 0));
-            pos_y = 35;
-        } else {
-            VIDEO::vga.fillRect( 56, 48,240,50,zxColor(0, 0));
-            pos_y = 59;
-        }
-    } else {
-        VIDEO::vga.fillRect(40, 32, 240, 50, zxColor(0, 0));
-        pos_x = 66;
-        pos_y = 43;
-    }
-
-    // Decode Logo in EBF8 format
-    uint8_t *logo = (uint8_t *)ESPectrum_logo;
-    int logo_w = (logo[5] << 8) + logo[4]; // Get Width
-    int logo_h = (logo[7] << 8) + logo[6]; // Get Height
-    logo+=8; // Skip header
-    for (int i=0; i < logo_h; i++)
-        for(int n=0; n<logo_w; n++)
-            VIDEO::vga.dotFast(pos_x + n,pos_y + i,logo[n+(i*logo_w)]);
-
-    OSD::osdAt(7, 1);
-    VIDEO::vga.setTextColor(zxColor(7, 1), zxColor(1, 0));
-    VIDEO::vga.print(StartMsg[Config::lang]);
-
-    VIDEO::vga.setTextColor(zxColor(16,0), zxColor(1, 0));
-    OSD::osdAt(9, 1);
-    VIDEO::vga.print("ESP");
-
-    switch (Config::lang) {
-        case 0: OSD::osdAt(7, 25);
-                VIDEO::vga.print("ESP");
-                OSD::osdAt(13, 13);
-                VIDEO::vga.print("ESP");
-                OSD::osdAt(17, 4);
-                break;
-        case 1: OSD::osdAt(7, 28);
-                VIDEO::vga.print("ESP");
-                OSD::osdAt(13, 13);
-                VIDEO::vga.print("ESP");
-                OSD::osdAt(17, 4);
-                break;
-        case 2: OSD::osdAt(7, 27);
-                VIDEO::vga.print("ESP");
-                OSD::osdAt(13, 18);
-                VIDEO::vga.print("ESP");
-                OSD::osdAt(17, 15);
-    }
-
-    VIDEO::vga.setTextColor(zxColor(3, 1), zxColor(1, 0));
-    VIDEO::vga.print("patreon.com/ESPectrum");
-
-    char msg[38];
-    for (int i=START_MSG_DURATION; i >= 0; i--) {
-        OSD::osdAt(19, 1);
-        // sprintf(msg,Config::lang ? "Este mensaje se cerrar" "\xA0" " en %02d segundos" : "This message will close in %02d seconds",i);
-        sprintf(msg,STARTMSG_CLOSE[Config::lang],i);
-        VIDEO::vga.setTextColor(zxColor(7, 0), zxColor(1, 0));
-        VIDEO::vga.print(msg);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-
-    VIDEO::vga.clear(zxColor(0,0));
-
-    // Disable StartMsg
-    Config::StartMsg = false;
-    Config::save("StartMsg");
-
-}
 
 void ESPectrum::showMemInfo(const char* caption) {
 
@@ -734,17 +652,53 @@ void ESPectrum::setup() {
     VIDEO::Init();
     VIDEO::Reset();
 
+    FileUtils::initFileSystem();
+
     if (Config::slog_on) showMemInfo("VGA started");
 
-    if (Config::StartMsg) ShowStartMsg(); // Show welcome message
+    // if (Config::StartMsg) ShowStartMsg(); // Show welcome message (function removed)
 
     //=======================================================================================
     // AUDIO
     //=======================================================================================
 
-    overSamplebuf = (uint32_t *) heap_caps_calloc(ESP_AUDIO_SAMPLES_PENTAGON, sizeof(uint32_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT);
 
-    if (overSamplebuf == NULL) printf("Can't allocate oversamplebuffer\n");
+    // Allocate oversample buffer in PSRAM first, fallback to internal RAM
+    if (overSamplebuf) {
+        heap_caps_free(overSamplebuf);
+        overSamplebuf = nullptr;
+    }
+    printf("--- Heap Diagnostics: Before oversamplebuf allocation ---\n");
+    printf("  Free heap: %u\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
+    printf("  Minimum ever free heap: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32
+    printf("  Free PSRAM: %u\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    printf("  Minimum ever free PSRAM: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM));
+#endif
+
+    overSamplebuf = (uint32_t *) heap_caps_calloc(samplesPerFrame, sizeof(uint32_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_32BIT);
+    if (!overSamplebuf) {
+        printf("Can't allocate oversamplebuffer in PSRAM, trying internal RAM\n");
+        overSamplebuf = (uint32_t *) heap_caps_calloc(samplesPerFrame, sizeof(uint32_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT);
+    }
+    if (!overSamplebuf) {
+        printf("Can't allocate oversamplebuffer at all! Halting.\n");
+        printf("--- Heap Diagnostics: After failed allocation ---\n");
+        printf("  Free heap: %u\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
+        printf("  Minimum ever free heap: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32
+        printf("  Free PSRAM: %u\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+        printf("  Minimum ever free PSRAM: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM));
+#endif
+        abort();
+    }
+    printf("--- Heap Diagnostics: After oversamplebuf allocation ---\n");
+    printf("  Free heap: %u\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
+    printf("  Minimum ever free heap: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32
+    printf("  Free PSRAM: %u\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    printf("  Minimum ever free PSRAM: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM));
+#endif
 
     // Set samples per frame and AY_emu flag depending on arch
     if (Config::arch == "48K") {
@@ -891,8 +845,6 @@ void ESPectrum::setup() {
     // Load snapshot if present in Config::ram_file
     if (Config::ram_file != NO_RAM_FILE) {
 
-        FileUtils::initFileSystem();
-
         // printf("------------------------------------\n");
         // printf("LOAD SNAPSHOT BECAUSE ARCH CHANGED OR RAM FILE SET\n");
         // printf("RAM file: %s\n", Config::ram_file.c_str());
@@ -977,6 +929,19 @@ void ESPectrum::setup() {
     double boottime = esp_timer_get_time() - ts_start;
     printf("Boot time: %6.2f\n", boottime / 1000000);
 
+    // Auto load autoexec.z80 from LittleFS if no snapshot was loaded
+    if (Config::last_ram_file == NO_RAM_FILE) {
+        string autoexecPath = (string)MOUNT_POINT_INTERNAL + "/autoexec.z80";
+        struct stat st;
+        if (stat(autoexecPath.c_str(), &st) != 0) {
+            autoexecPath = (string)MOUNT_POINT_INTERNAL + "/autoexec.Z80";
+        }
+        if (stat(autoexecPath.c_str(), &st) == 0) {
+            printf("Auto-loading %s\n", autoexecPath.c_str());
+            LoadSnapshot(autoexecPath, "", "", 0xff);
+        }
+    }
+
     // Load mouse test
     // LoadSnapshot("/sd/Tests/mouse.z80","","",0xff);
 
@@ -1040,8 +1005,16 @@ void ESPectrum::reset() {
         Tape::TAP_setBlockTimings();
     }
 
+
+    // Reallocate oversample buffer if samplesPerFrame changed
+    if (overSamplebuf) {
+        heap_caps_free(overSamplebuf);
+        overSamplebuf = nullptr;
+    }
+    overSamplebuf = (uint32_t *) heap_caps_calloc(samplesPerFrame, sizeof(uint32_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT);
+    if (overSamplebuf == NULL) printf("Can't allocate oversamplebuffer\n");
     // Empty audio buffers
-    for (int i=0;i<ESP_AUDIO_SAMPLES_PENTAGON;i++) {
+    for (int i=0;i<samplesPerFrame;i++) {
         overSamplebuf[i]=0;
         audioBuffer[i]=0;
         AySound::SamplebufAY[i]=0;

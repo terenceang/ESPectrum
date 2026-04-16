@@ -115,6 +115,7 @@ using namespace std;
 #define ESP_VOLUME_DEFAULT -8
 #define ESP_VOLUME_MAX 0
 #define ESP_VOLUME_MIN -16
+
 class ESPectrum
 {
 public:
@@ -148,6 +149,7 @@ public:
     static uint8_t covoxData[4];
     static uint16_t covoxMix;
     static uint16_t fcovoxMix;
+    // Dynamically allocated buffer, size = samplesPerFrame, see setup/reset for allocation
     static uint32_t* overSamplebuf;
     static unsigned char audioSampleDivider;
     static unsigned char audioAYDivider;
@@ -182,9 +184,7 @@ public:
     static int64_t idle;
     static int ESPoffset;
 
-    static int ESPtestvar;
-    static int ESPtestvar1;
-    static int ESPtestvar2;
+
 
     static volatile bool vsync;
 
