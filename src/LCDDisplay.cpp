@@ -28,7 +28,7 @@ static const int PIN_DC   = 13;
 static const spi_host_device_t LCD_SPI_HOST = SPI3_HOST;
 
 static esp_lcd_panel_io_handle_t io_handle = nullptr;
-static uint16_t *stripBuffer = nullptr;
+static uint16_t *stripBuffer[2] = {};
 static bool lcdInitialized = false;
 
 static void lcd_cmd(uint8_t cmd, const void *data = nullptr, size_t len = 0) {
@@ -132,8 +132,7 @@ void LCDDisplay::Init() {
     io_cfg.lcd_cmd_bits     = 8;
     io_cfg.lcd_param_bits   = 8;
     io_cfg.spi_mode         = 0;
-    io_cfg.trans_queue_depth = 10;
-    // on_color_trans_done left NULL → esp_lcd_panel_io_tx_color blocks until done
+    io_cfg.trans_queue_depth = 2;  // ping-pong: one in-flight, one being filled
     ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_SPI_HOST, &io_cfg, &io_handle);
     if (ret != ESP_OK) {
         printf("[LCD] ERROR: esp_lcd_new_panel_io_spi failed: %d\n", ret);
@@ -163,21 +162,23 @@ void LCDDisplay::Init() {
         }
     }
 
-    // Vertical strip buffer: STRIP_WIDTH columns × ACTIVE_H rows (worst-case).
+    // Two ping-pong strip buffers: one being filled by CPU while the other is in DMA flight.
     size_t allocCount = (size_t)STRIP_WIDTH * ACTIVE_H;
-    stripBuffer = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * allocCount,
-                                                MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
-    if (!stripBuffer)
-        stripBuffer = (uint16_t *)malloc(sizeof(uint16_t) * allocCount);
+    for (int i = 0; i < 2; ++i) {
+        stripBuffer[i] = (uint16_t *)heap_caps_malloc(sizeof(uint16_t) * allocCount,
+                                                       MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+        if (!stripBuffer[i])
+            stripBuffer[i] = (uint16_t *)malloc(sizeof(uint16_t) * allocCount);
+    }
 
-    printf("[LCD] Init done: stripBuffer=%p (%zu bytes)  backlight=ON\n",
-           (void *)stripBuffer, allocCount * sizeof(uint16_t));
+    printf("[LCD] Init done: stripBuffer[0]=%p [1]=%p (%zu bytes each)  backlight=ON\n",
+           (void *)stripBuffer[0], (void *)stripBuffer[1], allocCount * sizeof(uint16_t));
 
     lcdInitialized = true;
 }
 
 void LCDDisplay::Flush() {
-    if (!lcdInitialized || !stripBuffer || !VIDEO::vga.frameBuffer[0]) return;
+    if (!lcdInitialized || !stripBuffer[0] || !stripBuffer[1] || !VIDEO::vga.frameBuffer[0]) return;
 
     const int srcWidth  = OSD::scrW;
     const int srcHeight = OSD::scrH;
@@ -185,52 +186,53 @@ void LCDDisplay::Flush() {
     const int srcY   = (srcHeight > ACTIVE_H) ? (srcHeight - ACTIVE_H) / 2 : 0;
     const int width  = (srcWidth  > ACTIVE_W) ? ACTIVE_W : srcWidth;
     const int height = (srcHeight > ACTIVE_H) ? ACTIVE_H : srcHeight;
-    // Render and transfer the visible region in vertical strips (left→right).
-    // Each strip is up to STRIP_WIDTH pixels wide and covers `height` rows.
+
+    // Ping-pong: buf index alternates each strip so the CPU fills one buffer
+    // while the previous strip's DMA transfer is still in flight.
+    // trans_queue_depth=2 ensures tx_color blocks before a 3rd queuing attempt,
+    // guaranteeing the buffer we're about to overwrite has been consumed by DMA.
     const int maxStripW = STRIP_WIDTH;
+    int buf = 0;
     for (int stripX = 0; stripX < width; stripX += maxStripW) {
-        // Width of this strip (may be smaller at the right edge).
         const int thisStripW = (stripX + maxStripW > width) ? width - stripX : maxStripW;
 
-        // Fill the strip buffer row by row (top→bottom). The LCD expects
-        // pixels in row-major order (left→right, top→bottom) for the
-        // specified rectangle, so we build the buffer as [row0 pixels][row1...].
+        uint16_t *dst = stripBuffer[buf];
         for (int y = 0; y < height; ++y) {
             uint8_t *srcLine = (uint8_t *)VIDEO::vga.frameBuffer[y + srcY];
             if (!srcLine) srcLine = dummy_line;
-            uint16_t *dstRow = stripBuffer + (size_t)y * thisStripW;
-
-            for (int x = 0; x < thisStripW; ++x) {
-                // Source X is offset by srcX and XOR'd with 2 for alignment.
+            uint16_t *dstRow = dst + (size_t)y * thisStripW;
+            for (int x = 0; x < thisStripW; ++x)
                 dstRow[x] = pixelLUT[srcLine[(stripX + x + srcX) ^ 2] & 0x3F];
-            }
         }
 
-        // Update the LCD rectangle and send the prepared strip buffer.
         set_addr_window(OFFSET_X + stripX, OFFSET_Y, thisStripW, height);
-        esp_lcd_panel_io_tx_color(io_handle, 0x2C, stripBuffer,
+        esp_lcd_panel_io_tx_color(io_handle, 0x2C, dst,
                                    (size_t)thisStripW * height * sizeof(uint16_t));
+        buf ^= 1;
     }
 
     // Clear any unused columns on the right side of the LCD.
     if (width < ACTIVE_W) {
         const int clearW = ACTIVE_W - width;
         const size_t clearSize = (size_t)clearW * height * sizeof(uint16_t);
-        memset(stripBuffer, 0, clearSize);
+        uint16_t *dst = stripBuffer[buf];
+        memset(dst, 0, clearSize);
         set_addr_window(OFFSET_X + width, OFFSET_Y, clearW, height);
-        esp_lcd_panel_io_tx_color(io_handle, 0x2C, stripBuffer, clearSize);
+        esp_lcd_panel_io_tx_color(io_handle, 0x2C, dst, clearSize);
+        buf ^= 1;
     }
 
     // Clear any unused rows at the bottom of the LCD.
     if (height < ACTIVE_H) {
         const int clearH = ACTIVE_H - height;
-        // Clear in strips to stay within buffer limits.
         for (int stripX = 0; stripX < ACTIVE_W; stripX += maxStripW) {
             const int sw = (stripX + maxStripW > ACTIVE_W) ? ACTIVE_W - stripX : maxStripW;
             const size_t sz = (size_t)sw * clearH * sizeof(uint16_t);
-            memset(stripBuffer, 0, sz);
+            uint16_t *dst = stripBuffer[buf];
+            memset(dst, 0, sz);
             set_addr_window(OFFSET_X + stripX, OFFSET_Y + height, sw, clearH);
-            esp_lcd_panel_io_tx_color(io_handle, 0x2C, stripBuffer, sz);
+            esp_lcd_panel_io_tx_color(io_handle, 0x2C, dst, sz);
+            buf ^= 1;
         }
     }
 }
