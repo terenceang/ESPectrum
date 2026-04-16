@@ -3627,8 +3627,7 @@ void OSD::HWInfo() {
     // wm = uxTaskGetStackHighWaterMark(loopTaskHandle);
     // printf("Loop Task Stack HWM: %u\n", wm);
 
-    wm = uxTaskGetStackHighWaterMark(VIDEO::videoTaskHandle);
-    textout = " Video Task Stack HWM     : " + (Config::videomode ? to_string(wm) : "N/A") + "\n";
+    textout = " Video Task Stack HWM     : N/A\n";
     VIDEO::vga.print(textout.c_str());
 
     // Wait for key

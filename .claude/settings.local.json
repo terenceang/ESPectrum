@@ -5,7 +5,11 @@
       "Bash(powershell:*)",
       "Bash(xargs grep:*)",
       "Bash(~/.platformio/penv/Scripts/pio run:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(pio run:*)",
+      "Bash(wait)",
+      "Bash(grep -n \"spectrum_colors\\\\|zxColor\" /e/OneDrive/Documents/PlatformIO/Projects/ESPectrum/include/*.h /e/OneDrive/Documents/PlatformIO/Projects/ESPectrum/src/*.cpp)",
+      "Bash(grep:*)"
     ]
   }
 }

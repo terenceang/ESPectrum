@@ -41,30 +41,22 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 #define USE_LCD 1
 
 #include "ESPectrum.h"
-#define NO_VGA_STUB
-// Minimal VGA stub to remove hardware VGA dependency when not used.
-// This provides the surface API expected by the code but performs no hardware operations.
+#include "LCDDisplay.h"
 
-#ifndef NO_VGA_STUB
-// Real VGA driver include kept for boards that require it — define NO_VGA_STUB to use the stub.
-#include "ESP32Lib/VGA/VGA6Bit.h"
-#else
-class Font; // forward
+class Font; // forward declaration for setFont
 
+// LCD-only VGA6Bit stub: provides the frameBuffer array and no-op drawing API
+// used by OSD code. No VGA hardware is driven.
 class VGA6Bit {
 public:
-  // Interrupt handler present in Video.cpp
-  void interrupt(void *arg);
-
-  VGA6Bit() : xres(320), RGBAXMask(0xFFFFFFFF), SBits(0), VGA6Bit_useinterrupt(false), CenterH(0), CenterV(0) {
+  VGA6Bit() : xres(320) {
     for (size_t i = 0; i < frameBufferSize; ++i) frameBuffer[i] = nullptr;
   }
-  void init(int /*mode*/, const int */*redPins*/, const int */*grePins*/, const int */*bluPins*/, int /*hsync*/, int /*vsync*/, int /*clockPin*/ = -1, bool /*useOutput*/ = true) {}
-  void setFont(const Font &/*f*/) {}
-  void setCodepage(int /*cp*/) {}
-  void allocateLineBuffers(void **/*fb*/) {}
 
-  // Basic 2D/text API used by OSD; all no-ops in stub
+  void setFont(const Font & /*f*/) {}
+  void setCodepage(int /*cp*/) {}
+
+  // 2D/text API used by OSD — all no-ops (OSD writes pixels directly to frameBuffer)
   void print(const char * /*s*/) {}
   void print(const std::string & /*s*/) {}
   void println(const char *s) { print(s); }
@@ -84,38 +76,7 @@ public:
   static constexpr size_t frameBufferSize = 1024;
   void *frameBuffer[frameBufferSize];
   int xres;
-  uint32_t RGBAXMask;
-  uint32_t SBits;
-  bool VGA6Bit_useinterrupt;
-  int CenterH;
-  int CenterV;
 };
-// When the real VGA driver is not used we still need definitions used by Video.cpp
-enum vmodeproperties {
-  hRes = 0,
-  vRes = 1,
-  vDiv = 2,
-  hFront = 3,
-  hSync = 4,
-  hBack = 5,
-  vFront = 6,
-  vSync = 7,
-  vBack = 8,
-  r0sdm2 = 9,
-  r0odiv = 10,
-  r1sdm0 = 11,
-  r1sdm1 = 12,
-  r1sdm2 = 13,
-  r1odiv = 14,
-  hSyncPolarity = 15,
-  vSyncPolarity = 16
-};
-
-extern const unsigned short int vidmodes[][17];
-#endif
-#ifdef USE_LCD
-#include "LCDDisplay.h"
-#endif
 
 #define SPEC_W 256
 #define SPEC_H 192
@@ -181,10 +142,6 @@ extern const unsigned short int vidmodes[][17];
 
 #define NUM_SPECTRUM_COLORS 17
 
-const int redPins[] = {RED_PINS_6B};
-const int grePins[] = {GRE_PINS_6B};
-const int bluPins[] = {BLU_PINS_6B};
-
 #define zxColor(color,bright) (VIDEO::spectrum_colors[(bright) ? ((color) + 8) : (color)])
 
 class VIDEO
@@ -240,8 +197,6 @@ public:
 
   static void (*DrawBorder)();
 
-  static void vgataskinit(void *unused);
-
   static uint8_t* grmem;
 
   static uint16_t spectrum_colors[NUM_SPECTRUM_COLORS];
@@ -286,12 +241,6 @@ public:
   static uint8_t OSD;
 
   static uint32_t* SaveRect;
-
-  static TaskHandle_t videoTaskHandle;
-
-  // static int VsyncFinetune[2];
-
-  static uint32_t VsyncTarget;
 
   static uint32_t framecnt; // Frames elapsed
 

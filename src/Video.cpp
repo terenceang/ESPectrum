@@ -47,15 +47,6 @@ To Contact the dev team you can write to zxespectrum@gmail.com
 
 #pragma GCC optimize("O3")
 
-// Minimal vidmodes table to satisfy headless builds when a full vidmodes
-// table isn't provided by an external component. Each entry has 17
-// properties as declared in Video.h's `vmodeproperties` enum.
-// Values chosen as conservative defaults (320x240, vDiv=1).
-const unsigned short int vidmodes[][17] = {
-    {320, 240, 1, 16, 96, 48, 10, 2, 33, 0, 0, 0, 0, 0, 0, 1, 1}
-};
-
-extern Font Font6x8;
 
 VGA6Bit VIDEO::vga;
 
@@ -77,7 +68,6 @@ uint8_t* VIDEO::grmem;
 uint16_t VIDEO::offBmp[SPEC_H];
 uint16_t VIDEO::offAtt[SPEC_H];
 uint32_t* VIDEO::SaveRect;
-uint32_t VIDEO::VsyncTarget;
 uint32_t VIDEO::framecnt = 0;
 uint8_t VIDEO::dispUpdCycle;
 uint8_t VIDEO::att1;
@@ -137,27 +127,6 @@ static const uint8_t wait_st_2a3[131] = {
     1, 0, 0
 }; // sequence of wait states
 
-IRAM_ATTR void VGA6Bit::interrupt(void *arg) {
-
-    static int64_t elapsedmicros = 0;
-
-    int64_t currentmicros = esp_timer_get_time();
-
-    static int64_t prevmicros = currentmicros;
-
-    elapsedmicros += currentmicros - prevmicros;
-
-    if (elapsedmicros >= VIDEO::VsyncTarget) {
-
-        ESPectrum::vsync = true;
-
-        elapsedmicros -= ESPectrum::target[0];
-
-    }
-
-    prevmicros = currentmicros;
-
-}
 
 void (*VIDEO::Draw)(unsigned int, bool) = &VIDEO::Blank;
 void (*VIDEO::Draw_Opcode)(bool) = &VIDEO::Blank_Opcode;
@@ -195,113 +164,16 @@ void precalcborder32() {
     }
 }
 
-void VIDEO::vgataskinit(void *unused) {
-
-    uint8_t Mode = 0;
-
-    if (Config::videomode == 1) {
-
-        char c_arch = Config::arch[0];
-
-        switch (c_arch) {
-        case '4':
-            Mode = 4;
-            break;
-        case 'T':
-            Mode = Config::ALUTK == 0 ? 4 : Config::ALUTK == 1 ? 8 : 12; // Video mode depends on ULA chosen
-            break;
-        case '1':
-        case '+':
-            Mode = 16;
-            break;
-        case 'P':
-            Mode = 20;
-            break;
-        }
-
-        Mode += Config::scanlines;
-
-        OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
-        OSD::scrH = (vidmodes[Mode][vmodeproperties::vRes] / vidmodes[Mode][vmodeproperties::vDiv]) >> Config::scanlines;
-
-    } else {
-
-        char c_arch = Config::arch[0];
-
-        switch (c_arch) {
-        case '4':
-            Mode = 24;
-            break;
-        case 'T':
-            Mode = Config::ALUTK == 0 ? 24 : Config::ALUTK == 1 ? 25 : 26; // Video mode depends on ULA chosen
-            break;
-        case '1':
-        case '+':
-            Mode = 27;
-            break;
-        case 'P':
-            Mode = 28;
-            break;
-        }
-
-        OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
-        OSD::scrH = vidmodes[Mode][vmodeproperties::vRes] / vidmodes[Mode][vmodeproperties::vDiv];
-
-        // CRT Centering
-        vga.CenterH = Config::CenterH;
-        vga.CenterV = Config::CenterV;
-
-    }
-
-    vga.VGA6Bit_useinterrupt=true;
-
-    // Init mode
-    vga.init(Mode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN);
-
-    // This 'for' is needed for video mode with use_interrupt = true.
-    for (;;){}
-
-}
-
-TaskHandle_t VIDEO::videoTaskHandle;
 
 void VIDEO::Init() {
 
-    if (Config::videomode) {
+    // LCD-only: fixed 320x240 output via LCDDisplay
+    OSD::scrW = 320;
+    OSD::scrH = 240;
 
-        // In LCD mode, skip VGA signal generation and allocate the frame buffers only.
-        int Mode = 0;
-        Mode += Config::scanlines;
-
-        OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
-        OSD::scrH = (vidmodes[Mode][vmodeproperties::vRes] / vidmodes[Mode][vmodeproperties::vDiv]) >> Config::scanlines;
-
-        vga.VGA6Bit_useinterrupt = false;
-        vga.init(Mode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN, -1, false);
-
-    } else {
-
-        int Mode = 0;
-
-        Mode += Config::scanlines;
-
-        OSD::scrW = vidmodes[Mode][vmodeproperties::hRes];
-        OSD::scrH = (vidmodes[Mode][vmodeproperties::vRes] / vidmodes[Mode][vmodeproperties::vDiv]) >> Config::scanlines;
-
-        vga.VGA6Bit_useinterrupt=false;
-
-        // ESPectrum::showMemInfo("Before VGA init");
-        vga.init( Mode, redPins, grePins, bluPins, HSYNC_PIN, VSYNC_PIN, -1, false);
-        // ESPectrum::showMemInfo("After VGA init");
-
-    }
-
-    // Precalculate colors for current VGA mode
-    for (int i = 0; i < NUM_SPECTRUM_COLORS; i++)
-        spectrum_colors[i] = (spectrum_colors[i] & VIDEO::vga.RGBAXMask) | VIDEO::vga.SBits;
-
+    // AluBytes[0] is always used (SBits = 0 in LCD mode)
     for (int n = 0; n < 16; n++)
-        AluByte[n] = (unsigned int *)AluBytes[bitRead(VIDEO::vga.SBits,7)][n];
+        AluByte[n] = (unsigned int *)AluBytes[0][n];
 
     precalcULASWAP();   // precalculate ULA SWAP values
 
@@ -309,13 +181,7 @@ void VIDEO::Init() {
 
     SaveRect = (uint32_t *) heap_caps_malloc(0x9000, MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT);
 
-    // Set font & Codepage
-    vga.setFont(Font6x8);
-    vga.setCodepage(LANGCODEPAGE[Config::lang]);
-
-#ifdef USE_LCD
     LCDDisplay::Init();
-#endif
 }
 
 void VIDEO::Reset() {
@@ -338,8 +204,6 @@ void VIDEO::Reset() {
         tStatesScreen = TS_SCREEN_48;
         tStatesBorder = Config::videomode == 2 ? TS_BORDER_352x272 : (is169 ? TS_BORDER_360x200 : TS_BORDER_320x240);
 
-        VsyncTarget = MICROS_PER_FRAME_48;
-
     } else if (Config::arch == "TK90X" || Config::arch == "TK95" ) {
 
         switch (Config::ALUTK) {
@@ -347,19 +211,16 @@ void VIDEO::Reset() {
             tStatesPerLine = TSTATES_PER_LINE;
             tStatesScreen = TS_SCREEN_48;
             tStatesBorder = Config::videomode == 2 ? TS_BORDER_352x272 : (is169 ? TS_BORDER_360x200 : TS_BORDER_320x240);
-            VsyncTarget = MICROS_PER_FRAME_48;
             break;
         case 1: // Microdigital 50hz
             tStatesPerLine = TSTATES_PER_LINE_TK_50;
             tStatesScreen = TS_SCREEN_TK_50;
             tStatesBorder = Config::videomode == 2 ? TS_BORDER_352x272_TK_50 : (is169 ? TS_BORDER_360x200_TK_50 : TS_BORDER_320x240_TK_50);
-            VsyncTarget = MICROS_PER_FRAME_TK_50;
             break;
         case 2: // Microdigital 60hz
             tStatesPerLine = TSTATES_PER_LINE_TK_60;
             tStatesScreen = TS_SCREEN_TK_60;
             tStatesBorder = Config::videomode == 2 ? TS_BORDER_352x224_TK_60 : (is169 ? TS_BORDER_360x200_TK_60 : TS_BORDER_320x240_TK_60);
-            VsyncTarget = MICROS_PER_FRAME_TK_60;
         }
 
     } else if (Config::arch == "128K") {
@@ -367,8 +228,6 @@ void VIDEO::Reset() {
         tStatesPerLine = TSTATES_PER_LINE_128;
         tStatesScreen = TS_SCREEN_128;
         tStatesBorder = Config::videomode == 2 ? TS_BORDER_352x272_128 : (is169 ? TS_BORDER_360x200_128 : TS_BORDER_320x240_128);
-
-        VsyncTarget = MICROS_PER_FRAME_128;
 
     } else if (Config::arch == "+2A") {
 
@@ -379,20 +238,11 @@ void VIDEO::Reset() {
         tStatesBorder = Config::videomode == 2 ? TS_BORDER_352x272_128 : (is169 ? TS_BORDER_360x200_128 : TS_BORDER_320x240_128);
         tStatesBorder += 3;
 
-        VsyncTarget = MICROS_PER_FRAME_128;
-
     } else if (Config::arch == "Pentagon") {
 
         tStatesPerLine = TSTATES_PER_LINE_PENTAGON;
         tStatesScreen = TS_SCREEN_PENTAGON;
         tStatesBorder = Config::videomode == 2 ? TS_BORDER_352x272_PENTAGON : (is169 ? TS_BORDER_360x200_PENTAGON : TS_BORDER_320x240_PENTAGON);
-
-        VsyncTarget = MICROS_PER_FRAME_PENTAGON;
-        if (Config::videomode == 1) {
-            VsyncTarget -= 1792;
-        } else if (Config::videomode == 2) {
-            VsyncTarget -= 0;
-        }
 
         Draw_OSD43 = BottomBorder_Pentagon;
         DrawBorder = TopBorder_Blank_Pentagon;
@@ -1030,9 +880,7 @@ IRAM_ATTR void VIDEO::EndFrame() {
 
     framecnt++;
 
-#ifdef USE_LCD
     LCDDisplay::Flush();
-#endif
 }
 
 //----------------------------------------------------------------------------------------------------------------
